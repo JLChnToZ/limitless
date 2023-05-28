@@ -1,0 +1,178 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
+
+namespace JLChnToZ.CommonUtils.Dynamic {
+    using static Utilites;
+
+    /// <summary>Internal struct that holds type members information.</summary>
+    public readonly struct TypeInfo {
+        static readonly Dictionary<Type, TypeInfo> cache = new Dictionary<Type, TypeInfo>();
+        readonly ConstructorInfo[] constructors;
+        readonly PropertyInfo[] indexers;
+        readonly Dictionary<string, MethodInfo[]> methods;
+        readonly Dictionary<string, PropertyInfo> properties;
+        readonly Dictionary<string, FieldInfo> fields;
+        readonly Dictionary<Type, MethodInfo> castOperators;
+        readonly Dictionary<string, Type> subTypes;
+
+        public static TypeInfo Get(Type type) {
+            if (!cache.TryGetValue(type, out var typeInfo))
+                cache[type] = typeInfo = new TypeInfo(type);
+            return typeInfo;
+        }
+
+        TypeInfo(Type type) {
+            if (type == null) throw new ArgumentNullException(nameof(type));
+            methods = new Dictionary<string, MethodInfo[]>();
+            properties = new Dictionary<string, PropertyInfo>();
+            fields = new Dictionary<string, FieldInfo>();
+            castOperators = new Dictionary<Type, MethodInfo>();
+            subTypes = new Dictionary<string, Type>();
+            var tempMethods = new Dictionary<string, List<MethodInfo>>();
+            foreach (var m in type.GetMethods(DEFAULT_FLAGS)) {
+                var methodName = m.Name;
+                if (m.ContainsGenericParameters) {
+                    int methodCountIndex = methodName.LastIndexOf('`');
+                    if (methodCountIndex >= 0) methodName = methodName.Substring(0, methodCountIndex);
+                }
+                if (!tempMethods.TryGetValue(methodName, out var list))
+                    tempMethods[methodName] = list = new List<MethodInfo>();
+                list.Add(m);
+                switch (methodName) {
+                    case "op_Implicit":
+                    case "op_Explicit": {
+                        var parameters = m.GetParameters();
+                        var returnType = m.ReturnType;
+                        if (parameters.Length == 1 && returnType != type && returnType != typeof(void))
+                            castOperators[parameters[0].ParameterType] = m;
+                        break;
+                    }
+                }
+            }
+            foreach (var kv in tempMethods) methods[kv.Key] = kv.Value.ToArray();
+            var tempIndexers = new List<PropertyInfo>();
+            foreach (var p in type.GetProperties(DEFAULT_FLAGS)) {
+                properties[p.Name] = p;
+                if (p.GetIndexParameters().Length > 0) tempIndexers.Add(p);
+            }
+            indexers = tempIndexers.ToArray();
+            foreach (var f in type.GetFields(DEFAULT_FLAGS)) fields[f.Name] = f;
+            constructors = type.GetConstructors(INSTANCE_FLAGS);
+            foreach (var t in type.GetNestedTypes(DEFAULT_FLAGS)) subTypes[t.Name] = t;
+        }
+
+        internal bool TryGetValue(object instance, string key, out object value) {
+            if (properties.TryGetValue(key, out var property)) {
+                value = InternalWrap(property.GetValue(instance));
+                return true;
+            }
+            if (fields.TryGetValue(key, out var field)) {
+                value = InternalWrap(field.GetValue(instance));
+                return true;
+            }
+            value = null;
+            return false;
+        }
+
+        internal bool TryGetValue(object instance, object[] indexes, out object value) {
+            (PropertyInfo indexer, object[] safeIndexes)? fallback = null;
+            foreach (var indexer in indexers) {
+                var safeIndexes = indexes;
+                switch (UnwrapParamsAndCheck(indexer.GetIndexParameters(), ref safeIndexes)) {
+                    case MethodMatchLevel.Exact:
+                        fallback = (indexer, safeIndexes);
+                        goto skip;
+                    case MethodMatchLevel.Implicit:
+                        if (fallback == null) fallback = (indexer, safeIndexes);
+                        break;
+                }
+            }
+            skip: if (fallback.HasValue) {
+                value = InternalWrap(fallback.Value.indexer.GetValue(instance, fallback.Value.safeIndexes));
+                return true;
+            }
+            value = null;
+            return false;
+        }
+
+        internal bool TrySetValue(object instance, string key, object value) {
+            if (properties.TryGetValue(key, out var property)) {
+                property.SetValue(InternalUnwrap(instance), value);
+                return true;
+            }
+            if (fields.TryGetValue(key, out var field)) {
+                field.SetValue(InternalUnwrap(instance), value);
+                return true;
+            }
+            return false;
+        }
+
+        internal bool TrySetValue(object instance, object[] indexes, object value) {
+            (PropertyInfo indexer, object[] safeIndexes)? fallback = null;
+            foreach (var indexer in indexers) {
+                var safeIndexes = indexes;
+                switch (UnwrapParamsAndCheck(indexer.GetIndexParameters(), ref safeIndexes)) {
+                    case MethodMatchLevel.Exact:
+                        fallback = (indexer, safeIndexes);
+                        goto skip;
+                    case MethodMatchLevel.Implicit:
+                        if (fallback == null) fallback = (indexer, safeIndexes);
+                        break;
+                }
+            }
+            skip: if (fallback.HasValue) {
+                var returnType = fallback.Value.indexer.PropertyType;
+                if (value == null ? returnType.IsValueType :
+                    !returnType.IsAssignableFrom(value.GetType())) return false;
+                fallback.Value.indexer.SetValue(InternalUnwrap(instance), value, fallback.Value.safeIndexes);
+                return true;
+            }
+            return false;
+        }
+
+        internal bool TryGetMethods(string methodName, out MethodInfo[] method) => methods.TryGetValue(methodName, out method);
+
+        internal bool TryInvoke(object instance, string methodName, object[] args, out object result, IList<Type> genericTypes = null) {
+            var safeArgs = args;
+            if (methods.TryGetValue(methodName, out var methodArrays) &&
+                TryGetMatchingMethod(methodArrays, ref safeArgs, out var resultMethod, genericTypes)) {
+                result = InternalWrap(resultMethod.Invoke(InternalUnwrap(instance), safeArgs));
+                InternalWrap(safeArgs, args);
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        internal bool TryCast(object instance, Type type, out object result) {
+            // Note: Return results after casting must not be wrapped.
+            instance = InternalUnwrap(instance);
+            if (instance == null) {
+                result = null;
+                return !type.IsValueType; // Only reference types can be null
+            }
+            if (type.IsAssignableFrom(instance.GetType())) { // No need to cast if the type is already assignable
+                result = instance;
+                return true;
+            }
+            if (castOperators.TryGetValue(type, out var method)) {
+                result = method.Invoke(instance, emptyArgs);
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        internal bool TryConstruct(object[] args, out object result) {
+            if (TryGetMatchingMethod(constructors, ref args, out var resultConstructor)) {
+                result = InternalWrap(resultConstructor.Invoke(args));
+                return true;
+            }
+            result = null;
+            return false;
+        }
+
+        internal bool TryGetSubType(string name, out Type type) => subTypes.TryGetValue(name, out type);
+    }
+}
