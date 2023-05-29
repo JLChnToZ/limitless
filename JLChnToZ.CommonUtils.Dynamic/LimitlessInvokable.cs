@@ -55,7 +55,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) =>
-            TryInvoke(args, out result, binder.GetGenericTypeArguments());
+            TryInvoke(args, out result);
 
         bool TryInvoke(object[] args, out object result, IList<Type> genericTypes = null) {
             var safeArgs = args;

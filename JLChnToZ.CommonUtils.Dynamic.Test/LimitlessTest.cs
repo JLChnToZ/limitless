@@ -57,6 +57,18 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
             }
         }
 
+        [TestMethod]
+        public void TestAwait() => TestAwaitAsync().Wait();
+
+        async Task TestAwaitAsync() {
+            var limitless = Limitless.Static(typeof(TestSubject));
+            var task = limitless.AwaitableMethod(1);
+            Assert.IsInstanceOfType(task, typeof(Limitless), "Get a wrapped task.");
+            int result = await task;
+            Assert.AreEqual(result, 1, "Await a task.");
+            await Assert.ThrowsExceptionAsync<Exception>(() => limitless.AwaitThrowTask(), "Await a task that throws exception.");
+        }
+
         void TestLimitless(dynamic limitless, bool isStatic) {
             TestMethodAccess(limitless, isStatic);
             TestGenericMethodAccess(limitless, isStatic);
@@ -78,11 +90,9 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
 
         void TestGenericMethodAccess(dynamic limitless, bool isStatic) {
             Assert.IsNotNull(limitless);
-            //Assert.IsTrue(limitless.HiddenStaticGenericMethod<bool>(true), "Access static generic method with C# generics.");
             Assert.IsTrue(limitless.HiddenStaticGenericMethod.of(typeof(bool))(true), "Access static generic method with typeof.");
             Assert.IsTrue(limitless.HiddenStaticGenericMethod.of("System.Boolean")(true), "Access static generic method with type name.");
             if (isStatic) return;
-            //Assert.IsTrue(limitless.HiddenGenericMethod<bool>(true), "Access generic method with C# generics.");
             Assert.IsTrue(limitless.HiddenGenericMethod.of(typeof(bool))(true), "Access generic method with typeof.");
             Assert.IsTrue(limitless.HiddenGenericMethod.of("System.Boolean")(true), "Access generic method with type name.");
         }

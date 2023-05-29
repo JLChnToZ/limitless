@@ -123,7 +123,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             typeInfo.TrySetValue(target, indexes, value);
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) =>
-            typeInfo.TryInvoke(target, binder.Name, args, out result, binder.GetGenericTypeArguments());
+            typeInfo.TryInvoke(target, binder.Name, args, out result);
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
             if (target is Delegate del) {

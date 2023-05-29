@@ -42,6 +42,10 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
             return value;
         }
 
+        private object PrivateMethod(object par) {
+            return null;
+        }
+
         private bool PrivateMethod(bool par) {
             return par;
         }
@@ -63,7 +67,17 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
                 yield return new HiddenSubClass();
         }
 
-        private class HiddenSubClass {
+        static async Task<int> AwaitableMethod(int input) {
+            await Task.Delay(100);
+            return input;
+        }
+
+        static async Task AwaitThrowTask() {
+            await Task.Delay(100);
+            throw new Exception();
+        }
+
+        private struct HiddenSubClass {
             private static string privateStaticStringField = "privateStaticStringField";
 
             private string privateStringField = "privateStringField";

@@ -10,9 +10,6 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public const BindingFlags INSTANCE_FLAGS = BASE_FLAGS | BindingFlags.Instance;
         public const BindingFlags DEFAULT_FLAGS = STATIC_FLAGS | INSTANCE_FLAGS;
         public static readonly object[] emptyArgs = new object[0];
-        static bool isUsingCSharpBinder = true;
-        static Type invokeBinderType;
-        static PropertyInfo getTypeArgsProperty;
 
         public static object InternalUnwrap(object obj) => obj is Limitless limitObj ? limitObj.target : obj;
 
@@ -50,10 +47,15 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         public static MethodMatchLevel UnwrapParamAndCheck(Type type, ref object input) {
             if (input == null) return type.IsValueType ? MethodMatchLevel.NotMatch : MethodMatchLevel.Implicit;
-            if (input is Limitless limitObj) input = limitObj.target;
-            var inputType = input.GetType();
-            return type == inputType ? MethodMatchLevel.Exact :
-                type.IsAssignableFrom(input.GetType()) ? MethodMatchLevel.Implicit :
+            Type inputType, preferredType;
+            if (input is Limitless limitObj) {
+                input = limitObj.target;
+                preferredType = limitObj.type;
+                inputType = input.GetType();
+            } else
+                inputType = preferredType = input.GetType();
+            return type == preferredType ? MethodMatchLevel.Exact :
+                type.IsAssignableFrom(inputType) ? MethodMatchLevel.Implicit :
                 MethodMatchLevel.NotMatch;
         }
 
@@ -98,27 +100,6 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             }
             bestMatches = null;
             return false;
-        }
-
-        // https://stackoverflow.com/a/5493142, We can get generic type arguments, but needs some reflection.
-        public static IList<Type> GetGenericTypeArguments(this DynamicMetaObjectBinder binder) {
-            try {
-                if (!isUsingCSharpBinder || binder == null) return null;
-                // ICSharpInvokeOrInvokeMemberBinder is internal
-                // We can eat our own dog food here but it would potentially cause recursion.
-                if (invokeBinderType == null) {
-                    invokeBinderType = Type.GetType("Microsoft.CSharp.RuntimeBinder.ICSharpInvokeOrInvokeMemberBinder", false);
-                    if (invokeBinderType == null) {
-                        isUsingCSharpBinder = false;
-                        return null; // not using C# binder
-                    }
-                }
-                if (!binder.GetType().IsAssignableFrom(invokeBinderType)) return null;
-                if (getTypeArgsProperty == null) getTypeArgsProperty = invokeBinderType.GetProperty("TypeArguments");
-                return getTypeArgsProperty.GetValue(binder) as IList<Type>;
-            } catch {
-                return null;
-            }
         }
     }
 
