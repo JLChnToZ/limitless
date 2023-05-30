@@ -29,8 +29,8 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return objs;
         }
 
-        public static object InternalWrap(object obj) =>
-            obj == null || obj is Limitless || obj is LimitlessInvokable || Type.GetTypeCode(obj.GetType()) != TypeCode.Object ? obj : new Limitless(obj);
+        public static object InternalWrap(object obj, Type type = null) =>
+            obj == null || obj is Limitless || obj is LimitlessInvokable || Type.GetTypeCode(obj.GetType()) != TypeCode.Object ? obj : new Limitless(obj, type);
 
         public static void InternalWrap(object[] sourceObj, object[] destObj) {
             if (sourceObj == null || destObj == null) return;
@@ -41,10 +41,11 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public static bool TryGetMatchingMethod<T>(T[] methodInfos, ref object[] args, out T bestMatches) where T : MethodBase {
             MethodBase matched;
             if (args == null) args = emptyArgs;
-            matched = Type.DefaultBinder.SelectMethod(DEFAULT_FLAGS, methodInfos, Array.ConvertAll(args, GetUndelyType), null);
+            var binder = Type.DefaultBinder;
+            matched = binder.SelectMethod(DEFAULT_FLAGS, methodInfos, Array.ConvertAll(args, GetUndelyType), null);
             if (matched != null) {
                 bestMatches = (T)matched;
-                args = InternalUnwrap(args, Type.DefaultBinder, Array.ConvertAll(matched.GetParameters(), GetParameterType));
+                args = InternalUnwrap(args, binder, Array.ConvertAll(matched.GetParameters(), GetParameterType));
                 return true;
             }
             bestMatches = null;
@@ -61,27 +62,27 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         public static string ToOperatorMethodName(this ExpressionType expressionType) {
             switch (expressionType) {
-                case ExpressionType.Equal             : return "op_Equality";
-                case ExpressionType.NotEqual          : return "op_Inequality";
-                case ExpressionType.GreaterThan       : return "op_GreaterThan";
-                case ExpressionType.LessThan          : return "op_LessThan";
+                case ExpressionType.Equal: return "op_Equality";
+                case ExpressionType.NotEqual: return "op_Inequality";
+                case ExpressionType.GreaterThan: return "op_GreaterThan";
+                case ExpressionType.LessThan: return "op_LessThan";
                 case ExpressionType.GreaterThanOrEqual: return "op_GreaterThanOrEqual";
-                case ExpressionType.LessThanOrEqual   : return "op_LessThanOrEqual";
-                case ExpressionType.Add               : return "op_Addition";
-                case ExpressionType.Subtract          : return "op_Subtraction";
-                case ExpressionType.Multiply          : return "op_Multiply";
-                case ExpressionType.Divide            : return "op_Division";
-                case ExpressionType.Modulo            : return "op_Modulus";
-                case ExpressionType.And               : return "op_BitwiseAnd";
-                case ExpressionType.Or                : return "op_BitwiseOr";
-                case ExpressionType.ExclusiveOr       : return "op_ExclusiveOr";
-                case ExpressionType.LeftShift         : return "op_LeftShift";
-                case ExpressionType.RightShift        : return "op_RightShift";
-                case ExpressionType.Negate            : return "op_UnaryNegation";
-                case ExpressionType.Not               : return "op_LogicalNot";
-                case ExpressionType.OnesComplement    : return "op_OnesComplement";
-                case ExpressionType.Increment         : return "op_Increment";
-                case ExpressionType.Decrement         : return "op_Decrement";
+                case ExpressionType.LessThanOrEqual: return "op_LessThanOrEqual";
+                case ExpressionType.Add: case ExpressionType.AddAssign: return "op_Addition";
+                case ExpressionType.Subtract: case ExpressionType.SubtractAssign: return "op_Subtraction";
+                case ExpressionType.Multiply: case ExpressionType.MultiplyAssign: return "op_Multiply";
+                case ExpressionType.Divide: case ExpressionType.DivideAssign: return "op_Division";
+                case ExpressionType.Modulo: case ExpressionType.ModuloAssign: return "op_Modulus";
+                case ExpressionType.And: case ExpressionType.AndAssign: return "op_BitwiseAnd";
+                case ExpressionType.Or: case ExpressionType.OrAssign: return "op_BitwiseOr";
+                case ExpressionType.ExclusiveOr: case ExpressionType.ExclusiveOrAssign: return "op_ExclusiveOr";
+                case ExpressionType.LeftShift: case ExpressionType.LeftShiftAssign: return "op_LeftShift";
+                case ExpressionType.RightShift: case ExpressionType.RightShiftAssign: return "op_RightShift";
+                case ExpressionType.Negate: return "op_UnaryNegation";
+                case ExpressionType.Not: return "op_LogicalNot";
+                case ExpressionType.OnesComplement: return "op_OnesComplement";
+                case ExpressionType.Increment: return "op_Increment";
+                case ExpressionType.Decrement: return "op_Decrement";
                 default: throw new NotSupportedException();
             }
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Dynamic;
+using System.Linq.Expressions;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
     using static Utilites;
@@ -51,15 +52,22 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         /// <summary>Wrap an object to dynamic object.</summary>
         /// <param name="obj">The object to wrap.</param>
-        /// <param name="type">Optional base/interface type to wrap.</param>
+        /// <param name="toType">Optional base/interface type to wrap.</param>
         /// <returns>The dynamic object with access to all members of it.</returns>
-        public static dynamic Wrap(object obj, Type type = null) {
-            if (obj == null || (obj is Limitless && type == null) || obj is LimitlessInvokable) return obj;
-            if (type == null) return InternalWrap(obj);
-            obj = InternalUnwrap(obj);
-            if (!type.IsAssignableFrom(obj.GetType()))
-                throw new ArgumentException("Type mismatch", nameof(type));
-            return new Limitless(obj, type);
+        public static dynamic Wrap(object obj, Type toType = null) {
+            if (obj == null || (obj is Limitless && toType == null) || obj is LimitlessInvokable) return obj;
+            if (toType == null) return InternalWrap(obj);
+            object result;
+            var fromType = obj.GetType();
+            if (obj is Limitless wrapped) {
+                if (wrapped.typeInfo.TryCast(wrapped.target, toType, false, out result))
+                    return InternalWrap(result, toType);
+                obj = wrapped.target;
+            } else if (TypeInfo.Get(fromType).TryCast(obj, toType, false, out result))
+                return InternalWrap(result, toType);
+            if (TypeInfo.Get(toType).TryCast(obj, fromType, true, out result))
+                return InternalWrap(result, toType);
+            throw new ArgumentException("Type mismatch", nameof(toType));
         }
 
         /// <summary>Wrap an object to dynamic object.</summary>
@@ -179,7 +187,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             (target is DynamicObject dynamicObject && dynamicObject.TryUnaryOperation(binder, out result));
 
         public override bool TryConvert(ConvertBinder binder, out object result) {
-            if (typeInfo.TryCast(target, binder.Type, out result))
+            if (typeInfo.TryCast(target, binder.Type, false, out result))
                 return true;
             try {
                 if (target is IConvertible convertible) {
@@ -210,6 +218,26 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public override string ToString() => target?.ToString() ?? type.ToString();
 
         public override int GetHashCode() => target?.GetHashCode() ?? 0;
+
+        public static bool operator ==(Limitless a, object b) {
+            if (b is Limitless wrapped) b = wrapped.target;
+            if (ReferenceEquals(a.target, b)) return true;
+            object result;
+            if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b }, out result)) return (bool)result;
+            if (b == null) return a.target == null;
+            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Equality", new[] { b, a.target }, out result)) return (bool)result;
+            return false;
+        }
+
+        public static bool operator !=(Limitless a, object b) {
+            if (b is Limitless wrapped) b = wrapped.target;
+            if (ReferenceEquals(a.target, b)) return false;
+            object result;
+            if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b }, out result)) return (bool)result;
+            if (b == null) return a.target != null;
+            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Inequality", new[] { b, a.target }, out result)) return (bool)result;
+            return true;
+        }
     }
 
 }

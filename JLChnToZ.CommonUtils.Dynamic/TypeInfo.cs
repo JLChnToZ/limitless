@@ -8,12 +8,14 @@ namespace JLChnToZ.CommonUtils.Dynamic {
     /// <summary>Internal struct that holds type members information.</summary>
     public readonly struct TypeInfo {
         static readonly Dictionary<Type, TypeInfo> cache = new Dictionary<Type, TypeInfo>();
+        readonly Type type;
         readonly ConstructorInfo[] constructors;
         readonly PropertyInfo[] indexers;
         readonly Dictionary<string, MethodInfo[]> methods;
         readonly Dictionary<string, PropertyInfo> properties;
         readonly Dictionary<string, FieldInfo> fields;
-        readonly Dictionary<Type, MethodInfo> castOperators;
+        readonly Dictionary<Type, MethodInfo> castInOperators;
+        readonly Dictionary<Type, MethodInfo> castOutOperators;
         readonly Dictionary<string, Type> subTypes;
 
         public static TypeInfo Get(Type type) {
@@ -24,10 +26,12 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         TypeInfo(Type type) {
             if (type == null) throw new ArgumentNullException(nameof(type));
+            this.type = type;
             methods = new Dictionary<string, MethodInfo[]>();
             properties = new Dictionary<string, PropertyInfo>();
             fields = new Dictionary<string, FieldInfo>();
-            castOperators = new Dictionary<Type, MethodInfo>();
+            castInOperators = new Dictionary<Type, MethodInfo>();
+            castOutOperators = new Dictionary<Type, MethodInfo>();
             subTypes = new Dictionary<string, Type>();
             var tempMethods = new Dictionary<string, List<MethodInfo>>();
             foreach (var m in type.GetMethods(DEFAULT_FLAGS)) {
@@ -44,8 +48,13 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     case "op_Explicit": {
                         var parameters = m.GetParameters();
                         var returnType = m.ReturnType;
-                        if (parameters.Length == 1 && returnType != type && returnType != typeof(void))
-                            castOperators[parameters[0].ParameterType] = m;
+                        if (parameters.Length == 1 && returnType != typeof(void)) {
+                            var inputType = parameters[0].ParameterType;
+                            if (returnType == type)
+                                castInOperators[inputType] = m;
+                            else if (inputType == type)
+                                castOutOperators[returnType] = m;
+                        }
                         break;
                     }
                 }
@@ -137,19 +146,20 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return false;
         }
 
-        internal bool TryCast(object instance, Type type, out object result) {
+        internal bool TryCast(object instance, Type type, bool isIn, out object result) {
             // Note: Return results after casting must not be wrapped.
             instance = InternalUnwrap(instance);
             if (instance == null) {
                 result = null;
-                return !type.IsValueType; // Only reference types can be null
+                return !(isIn ? this.type : type).IsValueType; // Only reference types can be null
             }
-            if (type.IsAssignableFrom(instance.GetType())) { // No need to cast if the type is already assignable
+            var instanceType = isIn ? this.type : instance.GetType();
+            if (instanceType.IsAssignableFrom(type) || type.IsAssignableFrom(instanceType)) { // No need to cast if the type is already assignable
                 result = instance;
                 return true;
             }
-            if (castOperators.TryGetValue(type, out var method)) {
-                result = method.Invoke(instance, emptyArgs);
+            if ((isIn ? castInOperators : castOutOperators).TryGetValue(type, out var method)) {
+                result = method.Invoke(null, new[] { instance });
                 return true;
             }
             result = null;

@@ -24,6 +24,55 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
             TestInterfaceAccess(limitless);
             limitless = Limitless.Wrap(Limitless.Wrap(testSubject), "JLChnToZ.CommonUtils.Dynamic.Test.IInterface, JLChnToZ.CommonUtils.Dynamic.Test");
             TestInterfaceAccess(limitless);
+            limitless = Limitless.Wrap(1, typeof(TestSubject));
+            TestLimitless(limitless, true);
+        }
+
+        [TestMethod]
+        public void TestOperators() {
+            var testSubject = new TestSubject();
+            var testSubject2 = new TestSubject();
+            var limitless = Limitless.Wrap(testSubject);
+            var limitless2 = Limitless.Wrap(testSubject2);
+            object _;
+            _ = limitless + limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator+",  $"Call operator on 2 wrapped objects + (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless - limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator-",  $"Call operator on 2 wrapped objects - (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless * limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator*",  $"Call operator on 2 wrapped objects * (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless / limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator/",  $"Call operator on 2 wrapped objects / (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless % limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator%",  $"Call operator on 2 wrapped objects % (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless & limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator&",  $"Call operator on 2 wrapped objects & (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless | limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator|",  $"Call operator on 2 wrapped objects | (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless ^ limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator^",  $"Call operator on 2 wrapped objects ^ (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless << 1;            Assert.AreSame(TestSubject.lastCalledMethod, "operator<<", $"Call operator on 2 wrapped objects << (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless >> 1;            Assert.AreSame(TestSubject.lastCalledMethod, "operator>>", $"Call operator on 2 wrapped objects >> (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless++;               Assert.AreSame(TestSubject.lastCalledMethod, "operator++", $"Call operator on 1 wrapped object ++ (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless--;               Assert.AreSame(TestSubject.lastCalledMethod, "operator--", $"Call operator on 1 wrapped object -- (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless += limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator+",  $"Call operator on 2 wrapped objects += (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless -= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator-",  $"Call operator on 2 wrapped objects -= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless *= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator*",  $"Call operator on 2 wrapped objects *= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless /= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator/",  $"Call operator on 2 wrapped objects /= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless %= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator%",  $"Call operator on 2 wrapped objects %= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless &= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator&",  $"Call operator on 2 wrapped objects &= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless |= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator|",  $"Call operator on 2 wrapped objects |= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless ^= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator^",  $"Call operator on 2 wrapped objects ^= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless <<= 1;           Assert.AreSame(TestSubject.lastCalledMethod, "operator<<", $"Call operator on 2 wrapped objects <<= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless >>= 1;           Assert.AreSame(TestSubject.lastCalledMethod, "operator>>", $"Call operator on 2 wrapped objects >>= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless == limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator==", $"Call operator on 2 wrapped objects == (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless != limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator!=", $"Call operator on 2 wrapped objects != (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless > limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator>",  $"Call operator on 2 wrapped objects > (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless < limitless2;    Assert.AreSame(TestSubject.lastCalledMethod, "operator<",  $"Call operator on 2 wrapped objects < (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless >= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator>=", $"Call operator on 2 wrapped objects >= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless <= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator<=", $"Call operator on 2 wrapped objects <= (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless + testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator+",  $"Call operator to unwrapped object + (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless - testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator-",  $"Call operator to unwrapped object - (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless * testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator*",  $"Call operator to unwrapped object * (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless / testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator/",  $"Call operator to unwrapped object / (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless % testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator%",  $"Call operator to unwrapped object % (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless & testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator&",  $"Call operator to unwrapped object & (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless | testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator|",  $"Call operator to unwrapped object | (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless ^ testSubject2;  Assert.AreSame(TestSubject.lastCalledMethod, "operator^",  $"Call operator to unwrapped object ^ (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless == testSubject2; Assert.AreSame(TestSubject.lastCalledMethod, "operator==", $"Call operator to unwrapped object == (Actual = {TestSubject.lastCalledMethod})");
+            _ = limitless != testSubject2; Assert.AreSame(TestSubject.lastCalledMethod, "operator!=", $"Call operator to unwrapped object != (Actual = {TestSubject.lastCalledMethod})");
         }
 
         [TestMethod]
