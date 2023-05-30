@@ -39,10 +39,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public static bool TryGetMatchingMethod<T>(T[] methodInfos, ref object[] args, out T bestMatches) where T : MethodBase {
-            MethodBase matched;
             if (args == null) args = emptyArgs;
             var binder = Type.DefaultBinder;
-            matched = binder.SelectMethod(DEFAULT_FLAGS, methodInfos, Array.ConvertAll(args, GetUndelyType), null);
+            var matched = binder.SelectMethod(DEFAULT_FLAGS, methodInfos, Array.ConvertAll(args, GetUndelyType), null);
             if (matched != null) {
                 bestMatches = (T)matched;
                 args = InternalUnwrap(args, binder, Array.ConvertAll(matched.GetParameters(), GetParameterType));
@@ -78,6 +77,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 case ExpressionType.ExclusiveOr: case ExpressionType.ExclusiveOrAssign: return "op_ExclusiveOr";
                 case ExpressionType.LeftShift: case ExpressionType.LeftShiftAssign: return "op_LeftShift";
                 case ExpressionType.RightShift: case ExpressionType.RightShiftAssign: return "op_RightShift";
+                case ExpressionType.UnaryPlus: return "op_UnaryPlus";
                 case ExpressionType.Negate: return "op_UnaryNegation";
                 case ExpressionType.Not: return "op_LogicalNot";
                 case ExpressionType.OnesComplement: return "op_OnesComplement";

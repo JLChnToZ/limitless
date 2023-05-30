@@ -47,6 +47,8 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
             _ = limitless >> 1;            Assert.AreSame(TestSubject.lastCalledMethod, "operator>>", $"Call operator on 2 wrapped objects >> (Actual = {TestSubject.lastCalledMethod})");
             _ = limitless++;               Assert.AreSame(TestSubject.lastCalledMethod, "operator++", $"Call operator on 1 wrapped object ++ (Actual = {TestSubject.lastCalledMethod})");
             _ = limitless--;               Assert.AreSame(TestSubject.lastCalledMethod, "operator--", $"Call operator on 1 wrapped object -- (Actual = {TestSubject.lastCalledMethod})");
+            _ = +limitless;                Assert.AreSame(TestSubject.lastCalledMethod, "operator+",  $"Call operator on 1 wrapped object + (Actual = {TestSubject.lastCalledMethod})");
+            _ = -limitless;                Assert.AreSame(TestSubject.lastCalledMethod, "operator-",  $"Call operator on 1 wrapped object - (Actual = {TestSubject.lastCalledMethod})");
             _ = limitless += limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator+",  $"Call operator on 2 wrapped objects += (Actual = {TestSubject.lastCalledMethod})");
             _ = limitless -= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator-",  $"Call operator on 2 wrapped objects -= (Actual = {TestSubject.lastCalledMethod})");
             _ = limitless *= limitless2;   Assert.AreSame(TestSubject.lastCalledMethod, "operator*",  $"Call operator on 2 wrapped objects *= (Actual = {TestSubject.lastCalledMethod})");

@@ -85,17 +85,17 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TryGetValue(object instance, object[] indexes, out object value) {
-            PropertyInfo matched;
             if (indexes == null || indexers.Length == 0) {
                 value = null;
                 return false;
             }
-            matched = Type.DefaultBinder.SelectProperty(
+            var binder = Type.DefaultBinder;
+            var matched = binder.SelectProperty(
                 DEFAULT_FLAGS | BindingFlags.GetProperty, indexers, null, Array.ConvertAll(indexes, GetUndelyType), null
             );
             if (matched != null) {
                 value = InternalWrap(matched.GetValue(instance, InternalUnwrap(
-                    indexes, Type.DefaultBinder,
+                    indexes, binder,
                     Array.ConvertAll(matched.GetIndexParameters(), GetParameterType)
                 )));
                 return true;
@@ -117,14 +117,14 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TrySetValue(object instance, object[] indexes, object value) {
-            PropertyInfo matched;
             if (indexes == null || indexers.Length == 0) return false;
-            matched = Type.DefaultBinder.SelectProperty(
+            var binder = Type.DefaultBinder;
+            var matched = binder.SelectProperty(
                 DEFAULT_FLAGS | BindingFlags.SetProperty, indexers, null, Array.ConvertAll(indexes, GetUndelyType), null
             );
             if (matched != null) {
                 matched.SetValue(InternalUnwrap(instance), value, InternalUnwrap(
-                    indexes, Type.DefaultBinder,
+                    indexes, binder,
                     Array.ConvertAll(matched.GetIndexParameters(), GetParameterType)
                 ));
                 return true;
