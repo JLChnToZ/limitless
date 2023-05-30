@@ -60,7 +60,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public static object InternalWrap(object obj) =>
-            obj == null || obj is DynamicObject || Type.GetTypeCode(obj.GetType()) != TypeCode.Object ? obj : new Limitless(obj);
+            obj == null || obj is Limitless || obj is LimitlessInvokable || Type.GetTypeCode(obj.GetType()) != TypeCode.Object ? obj : new Limitless(obj);
 
         public static void InternalWrap(object[] sourceObj, object[] destObj) {
             if (sourceObj == null || destObj == null) return;

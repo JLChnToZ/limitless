@@ -54,12 +54,10 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         /// <param name="type">Optional base/interface type to wrap.</param>
         /// <returns>The dynamic object with access to all members of it.</returns>
         public static dynamic Wrap(object obj, Type type = null) {
-            if (obj == null) return null;
-            if (obj is Limitless ? type == null : obj is DynamicObject) return obj;
+            if (obj == null || (obj is Limitless && type == null) || obj is LimitlessInvokable) return obj;
             if (type == null) return InternalWrap(obj);
             obj = InternalUnwrap(obj);
-            var objType = obj.GetType();
-            if (!type.IsAssignableFrom(objType) && !objType.IsAssignableFrom(type))
+            if (!type.IsAssignableFrom(obj.GetType()))
                 throw new ArgumentException("Type mismatch", nameof(type));
             return new Limitless(obj, type);
         }
@@ -109,21 +107,56 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 result = Static(subType);
                 return true;
             }
-            return typeInfo.TryGetValue(target, new[] { binder.Name }, out result);
+            if (typeInfo.TryGetValue(target, new[] { binder.Name }, out result))
+                return true;
+            if (target is DynamicObject dynamicObject && dynamicObject.TryGetMember(binder, out result))
+                return true;
+            return false;
         }
 
         public override bool TrySetMember(SetMemberBinder binder, object value) =>
             typeInfo.TrySetValue(target, binder.Name, value) ||
-            typeInfo.TrySetValue(target, new[] { binder.Name }, value);
+            typeInfo.TrySetValue(target, new[] { binder.Name }, value) ||
+            (target is DynamicObject dynamicObject && dynamicObject.TrySetMember(binder, value));
 
         public override bool TryGetIndex(GetIndexBinder binder, object[] indexes, out object result) =>
-            typeInfo.TryGetValue(target, indexes, out result);
+            typeInfo.TryGetValue(target, indexes, out result) ||
+            (target is DynamicObject dynamicObject && dynamicObject.TryGetIndex(binder, indexes, out result));
 
         public override bool TrySetIndex(SetIndexBinder binder, object[] indexes, object value) =>
-            typeInfo.TrySetValue(target, indexes, value);
+            typeInfo.TrySetValue(target, indexes, value) ||
+            (target is DynamicObject dynamicObject && dynamicObject.TrySetIndex(binder, indexes, value));
+
+        public override bool TryDeleteIndex(DeleteIndexBinder binder, object[] indexes) {
+            if (indexes.Length == 1) {
+                if (type.IsArray) return false;
+                if (type.IsAssignableFrom(typeof(IDictionary))) {
+                    ((IDictionary)target).Remove(indexes[0]);
+                    return true;
+                }
+                if (type.IsAssignableFrom(typeof(IList)) && indexes[0] != null && indexes[0].GetType() == typeof(int)) {
+                    ((IList)target).RemoveAt(Convert.ToInt32(indexes[0]));
+                    return true;
+                }
+            }
+            if (target is DynamicObject dynamicObject)
+                return dynamicObject.TryDeleteIndex(binder, indexes);
+            return false;
+        }
+
+        public override bool TryDeleteMember(DeleteMemberBinder binder) {
+            if (type.IsAssignableFrom(typeof(IDictionary))) {
+                ((IDictionary)target).Remove(binder.Name);
+                return true;
+            }
+            if (target is DynamicObject dynamicObject)
+                return dynamicObject.TryDeleteMember(binder);
+            return false;
+        }
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) =>
-            typeInfo.TryInvoke(target, binder.Name, args, out result);
+            typeInfo.TryInvoke(target, binder.Name, args, out result) ||
+            (target is DynamicObject dynamicObject && dynamicObject.TryInvokeMember(binder, args, out result));
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
             if (target is Delegate del) {
@@ -131,15 +164,19 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 InternalWrap(args, args);
                 return true;
             }
+            if (target is DynamicObject dynamicObject && dynamicObject.TryInvoke(binder, args, out result))
+                return true;
             result = null;
             return false;
         }
 
         public override bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result) =>
-            typeInfo.TryInvoke(target, $"op_{binder.Operation}", new[] { arg }, out result);
+            typeInfo.TryInvoke(target, $"op_{binder.Operation}", new[] { arg }, out result) ||
+            (target is DynamicObject dynamicObject && dynamicObject.TryBinaryOperation(binder, arg, out result));
 
         public override bool TryUnaryOperation(UnaryOperationBinder binder, out object result) =>
-            typeInfo.TryInvoke(target, $"op_{binder.Operation}", null, out result);
+            typeInfo.TryInvoke(target, $"op_{binder.Operation}", null, out result) ||
+            (target is DynamicObject dynamicObject && dynamicObject.TryUnaryOperation(binder, out result));
 
         public override bool TryConvert(ConvertBinder binder, out object result) {
             if (typeInfo.TryCast(target, binder.Type, out result))
@@ -149,7 +186,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     result = convertible.ToType(binder.Type, null);
                     return true;
                 }
-            } catch (Exception) { }
+            } catch { }
+            if (target is DynamicObject dynamicObject && dynamicObject.TryConvert(binder, out result))
+                return true;
             result = null;
             return false;
         }
