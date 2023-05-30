@@ -86,6 +86,7 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
             Assert.IsTrue(limitless.PrivateStaticMethod(true), "Access private static method");
             if (isStatic) return;
             Assert.IsTrue(limitless.PrivateMethod(true), "Access private method");
+            Assert.IsNull(limitless.PrivateMethod(null), "Access private method with null");
         }
 
         void TestGenericMethodAccess(dynamic limitless, bool isStatic) {

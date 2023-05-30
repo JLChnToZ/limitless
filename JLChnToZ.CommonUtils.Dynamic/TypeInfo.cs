@@ -63,7 +63,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TryGetValue(object instance, string key, out object value) {
-            if (properties.TryGetValue(key, out var property)) {
+            if (properties.TryGetValue(key, out var property) && property.CanRead && property.GetIndexParameters().Length == 0) {
                 value = InternalWrap(property.GetValue(instance));
                 return true;
             }
@@ -76,20 +76,16 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TryGetValue(object instance, object[] indexes, out object value) {
-            (PropertyInfo indexer, object[] safeIndexes)? fallback = null;
-            foreach (var indexer in indexers) {
-                var safeIndexes = indexes;
-                switch (UnwrapParamsAndCheck(indexer.GetIndexParameters(), ref safeIndexes)) {
-                    case MethodMatchLevel.Exact:
-                        fallback = (indexer, safeIndexes);
-                        goto skip;
-                    case MethodMatchLevel.Implicit:
-                        if (fallback == null) fallback = (indexer, safeIndexes);
-                        break;
-                }
-            }
-            skip: if (fallback.HasValue) {
-                value = InternalWrap(fallback.Value.indexer.GetValue(instance, fallback.Value.safeIndexes));
+            PropertyInfo matched;
+            if (indexes == null) indexes = emptyArgs;
+            matched = Type.DefaultBinder.SelectProperty(
+                DEFAULT_FLAGS | BindingFlags.GetProperty, indexers, null, Array.ConvertAll(indexes, GetUndelyType), null
+            );
+            if (matched != null) {
+                value = InternalWrap(matched.GetValue(instance, InternalUnwrap(
+                    indexes, Type.DefaultBinder,
+                    Array.ConvertAll(matched.GetIndexParameters(), GetParameterType)
+                )));
                 return true;
             }
             value = null;
@@ -97,11 +93,11 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TrySetValue(object instance, string key, object value) {
-            if (properties.TryGetValue(key, out var property)) {
+            if (properties.TryGetValue(key, out var property) && property.CanWrite && property.GetIndexParameters().Length == 0) {
                 property.SetValue(InternalUnwrap(instance), value);
                 return true;
             }
-            if (fields.TryGetValue(key, out var field)) {
+            if (fields.TryGetValue(key, out var field) && !field.IsInitOnly) {
                 field.SetValue(InternalUnwrap(instance), value);
                 return true;
             }
@@ -109,23 +105,15 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TrySetValue(object instance, object[] indexes, object value) {
-            (PropertyInfo indexer, object[] safeIndexes)? fallback = null;
-            foreach (var indexer in indexers) {
-                var safeIndexes = indexes;
-                switch (UnwrapParamsAndCheck(indexer.GetIndexParameters(), ref safeIndexes)) {
-                    case MethodMatchLevel.Exact:
-                        fallback = (indexer, safeIndexes);
-                        goto skip;
-                    case MethodMatchLevel.Implicit:
-                        if (fallback == null) fallback = (indexer, safeIndexes);
-                        break;
-                }
-            }
-            skip: if (fallback.HasValue) {
-                var returnType = fallback.Value.indexer.PropertyType;
-                if (value == null ? returnType.IsValueType :
-                    !returnType.IsAssignableFrom(value.GetType())) return false;
-                fallback.Value.indexer.SetValue(InternalUnwrap(instance), value, fallback.Value.safeIndexes);
+            PropertyInfo matched;
+            matched = Type.DefaultBinder.SelectProperty(
+                DEFAULT_FLAGS | BindingFlags.SetProperty, indexers, null, Array.ConvertAll(indexes, GetUndelyType), null
+            );
+            if (matched != null) {
+                matched.SetValue(InternalUnwrap(instance), value, InternalUnwrap(
+                    indexes, Type.DefaultBinder,
+                    Array.ConvertAll(matched.GetIndexParameters(), GetParameterType)
+                ));
                 return true;
             }
             return false;
@@ -133,10 +121,10 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         internal bool TryGetMethods(string methodName, out MethodInfo[] method) => methods.TryGetValue(methodName, out method);
 
-        internal bool TryInvoke(object instance, string methodName, object[] args, out object result, IList<Type> genericTypes = null) {
+        internal bool TryInvoke(object instance, string methodName, object[] args, out object result) {
             var safeArgs = args;
             if (methods.TryGetValue(methodName, out var methodArrays) &&
-                TryGetMatchingMethod(methodArrays, ref safeArgs, out var resultMethod, genericTypes)) {
+                TryGetMatchingMethod(methodArrays, ref safeArgs, out var resultMethod)) {
                 result = InternalWrap(resultMethod.Invoke(InternalUnwrap(instance), safeArgs));
                 InternalWrap(safeArgs, args);
                 return true;

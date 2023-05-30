@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Reflection;
 
@@ -57,9 +56,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) =>
             TryInvoke(args, out result);
 
-        bool TryInvoke(object[] args, out object result, IList<Type> genericTypes = null) {
+        bool TryInvoke(object[] args, out object result) {
             var safeArgs = args;
-            if (TryGetMatchingMethod(methodInfos, ref safeArgs, out var methodInfo, genericTypes)) {
+            if (TryGetMatchingMethod(methodInfos, ref safeArgs, out var methodInfo)) {
                 result = InternalWrap(methodInfo.Invoke(target, safeArgs));
                 InternalWrap(safeArgs, args);
                 return true;
@@ -87,21 +86,15 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             if (delegateType.IsSubclassOf(typeof(Delegate))) {
                 var invokeMethod = delegateType.GetMethod("Invoke");
                 if (invokeMethod != null) {
-                    var expectedParameters = invokeMethod.GetParameters();
-                    var expectedReturnType = invokeMethod.ReturnType;
-                    foreach (var methodInfo in methodInfos) {
-                        if (methodInfo.ContainsGenericParameters ||
-                            methodInfo.ReturnType != expectedReturnType) continue;
-                        var parameters = methodInfo.GetParameters();
-                        if (parameters.Length != expectedParameters.Length) continue;
-                        for (int i = 0; i < parameters.Length; i++)
-                            if (parameters[i].ParameterType != expectedParameters[i].ParameterType)
-                                goto NoMatches;
+                    var matched = Type.DefaultBinder.SelectMethod(
+                        DEFAULT_FLAGS, methodInfos,
+                        Array.ConvertAll(invokeMethod.GetParameters(), GetParameterType), null
+                    ) as MethodInfo;
+                    if (matched != null && matched.ReturnType == invokeMethod.ReturnType) {
                         result = target == null ?
-                            Delegate.CreateDelegate(delegateType, methodInfo, false) :
-                            Delegate.CreateDelegate(delegateType, target, methodInfo, false);
-                        if (result != null) return true;
-                        NoMatches:;
+                            Delegate.CreateDelegate(delegateType, matched, false) :
+                            Delegate.CreateDelegate(delegateType, target, matched, false);
+                        return true;
                     }
                 }
             }
