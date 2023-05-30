@@ -83,7 +83,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 case ExpressionType.OnesComplement: return "op_OnesComplement";
                 case ExpressionType.Increment: return "op_Increment";
                 case ExpressionType.Decrement: return "op_Decrement";
-                default: throw new NotSupportedException();
+                case ExpressionType.IsTrue: return "op_True";
+                case ExpressionType.IsFalse: return "op_False";
+                default: return ""; // Fail silently
             }
         }
     }
