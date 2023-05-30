@@ -219,13 +219,36 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         public override int GetHashCode() => target?.GetHashCode() ?? 0;
 
+        public override bool Equals(object obj) {
+            if (obj is Limitless wrapped) obj = wrapped.target;
+            if (ReferenceEquals(target, obj)) return true;
+            if (obj == null) return target == null;
+            return target.Equals(obj);
+        }
+
+        public static bool operator ==(Limitless a, Limitless b) {
+            if (ReferenceEquals(a.target, b.target)) return true;
+            object result;
+            if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result)) return (bool)result;
+            if (b.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result)) return (bool)result;
+            return false;
+        }
+
+        public static bool operator !=(Limitless a, Limitless b) {
+            if (ReferenceEquals(a.target, b.target)) return false;
+            object result;
+            if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result)) return (bool)result;
+            if (b.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result)) return (bool)result;
+            return true;
+        }
+
         public static bool operator ==(Limitless a, object b) {
             if (b is Limitless wrapped) b = wrapped.target;
             if (ReferenceEquals(a.target, b)) return true;
             object result;
             if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b }, out result)) return (bool)result;
             if (b == null) return a.target == null;
-            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Equality", new[] { b, a.target }, out result)) return (bool)result;
+            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Equality", new[] { a.target, b }, out result)) return (bool)result;
             return false;
         }
 
@@ -235,7 +258,27 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             object result;
             if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b }, out result)) return (bool)result;
             if (b == null) return a.target != null;
-            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Inequality", new[] { b, a.target }, out result)) return (bool)result;
+            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Inequality", new[] { a.target, b }, out result)) return (bool)result;
+            return true;
+        }
+
+        public static bool operator ==(object a, Limitless b) {
+            if (a is Limitless wrapped) a = wrapped.target;
+            if (ReferenceEquals(a, b.target)) return true;
+            object result;
+            if (b.typeInfo.TryInvoke(null, "op_Equality", new[] { a, b.target }, out result)) return (bool)result;
+            if (a == null) return b.target == null;
+            if (TypeInfo.Get(a.GetType()).TryInvoke(null, "op_Equality", new[] { a, b.target }, out result)) return (bool)result;
+            return false;
+        }
+
+        public static bool operator !=(object a, Limitless b) {
+            if (a is Limitless wrapped) a = wrapped.target;
+            if (ReferenceEquals(a, b.target)) return false;
+            object result;
+            if (b.typeInfo.TryInvoke(null, "op_Inequality", new[] { a, b.target }, out result)) return (bool)result;
+            if (a == null) return b.target != null;
+            if (TypeInfo.Get(a.GetType()).TryInvoke(null, "op_Inequality", new[] { a, b.target }, out result)) return (bool)result;
             return true;
         }
     }
