@@ -171,11 +171,11 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result) =>
-            typeInfo.TryInvoke(target, $"op_{binder.Operation}", new[] { arg }, out result) ||
+            typeInfo.TryInvoke(null, binder.Operation.ToOperatorMethodName(), new[] { target, arg }, out result) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryBinaryOperation(binder, arg, out result));
 
         public override bool TryUnaryOperation(UnaryOperationBinder binder, out object result) =>
-            typeInfo.TryInvoke(target, $"op_{binder.Operation}", null, out result) ||
+            typeInfo.TryInvoke(null, binder.Operation.ToOperatorMethodName(), new[] { target }, out result) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryUnaryOperation(binder, out result));
 
         public override bool TryConvert(ConvertBinder binder, out object result) {

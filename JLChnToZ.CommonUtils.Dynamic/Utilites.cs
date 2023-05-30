@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
@@ -57,6 +58,33 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public static Type GetParameterType(ParameterInfo parameterInfo) => parameterInfo.ParameterType;
+
+        public static string ToOperatorMethodName(this ExpressionType expressionType) {
+            switch (expressionType) {
+                case ExpressionType.Equal             : return "op_Equality";
+                case ExpressionType.NotEqual          : return "op_Inequality";
+                case ExpressionType.GreaterThan       : return "op_GreaterThan";
+                case ExpressionType.LessThan          : return "op_LessThan";
+                case ExpressionType.GreaterThanOrEqual: return "op_GreaterThanOrEqual";
+                case ExpressionType.LessThanOrEqual   : return "op_LessThanOrEqual";
+                case ExpressionType.Add               : return "op_Addition";
+                case ExpressionType.Subtract          : return "op_Subtraction";
+                case ExpressionType.Multiply          : return "op_Multiply";
+                case ExpressionType.Divide            : return "op_Division";
+                case ExpressionType.Modulo            : return "op_Modulus";
+                case ExpressionType.And               : return "op_BitwiseAnd";
+                case ExpressionType.Or                : return "op_BitwiseOr";
+                case ExpressionType.ExclusiveOr       : return "op_ExclusiveOr";
+                case ExpressionType.LeftShift         : return "op_LeftShift";
+                case ExpressionType.RightShift        : return "op_RightShift";
+                case ExpressionType.Negate            : return "op_UnaryNegation";
+                case ExpressionType.Not               : return "op_LogicalNot";
+                case ExpressionType.OnesComplement    : return "op_OnesComplement";
+                case ExpressionType.Increment         : return "op_Increment";
+                case ExpressionType.Decrement         : return "op_Decrement";
+                default: throw new NotSupportedException();
+            }
+        }
     }
 
     internal enum MethodMatchLevel {
