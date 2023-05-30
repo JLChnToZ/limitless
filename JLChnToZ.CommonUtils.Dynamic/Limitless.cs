@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Dynamic;
-using System.Linq.Expressions;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
     using static Utilites;
@@ -138,11 +137,11 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public override bool TryDeleteIndex(DeleteIndexBinder binder, object[] indexes) {
             if (indexes.Length == 1) {
                 if (type.IsArray) return false;
-                if (type.IsAssignableFrom(typeof(IDictionary))) {
+                if (typeof(IDictionary).IsAssignableFrom(type)) {
                     ((IDictionary)target).Remove(indexes[0]);
                     return true;
                 }
-                if (type.IsAssignableFrom(typeof(IList)) && indexes[0] != null && indexes[0].GetType() == typeof(int)) {
+                if (typeof(IList).IsAssignableFrom(type) && indexes[0] != null && indexes[0].GetType() == typeof(int)) {
                     ((IList)target).RemoveAt(Convert.ToInt32(indexes[0]));
                     return true;
                 }
@@ -153,7 +152,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryDeleteMember(DeleteMemberBinder binder) {
-            if (type.IsAssignableFrom(typeof(IDictionary))) {
+            if (typeof(IDictionary).IsAssignableFrom(type)) {
                 ((IDictionary)target).Remove(binder.Name);
                 return true;
             }
@@ -229,16 +228,18 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public static bool operator ==(Limitless a, Limitless b) {
             if (ReferenceEquals(a.target, b.target)) return true;
             object result;
-            if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result)) return (bool)result;
-            if (b.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result)) return (bool)result;
+            if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result) ||
+                b.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result))
+                return (bool)result;
             return false;
         }
 
         public static bool operator !=(Limitless a, Limitless b) {
             if (ReferenceEquals(a.target, b.target)) return false;
             object result;
-            if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result)) return (bool)result;
-            if (b.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result)) return (bool)result;
+            if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result) ||
+                b.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result))
+                return (bool)result;
             return true;
         }
 

@@ -154,7 +154,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 return !(isIn ? this.type : type).IsValueType; // Only reference types can be null
             }
             var instanceType = isIn ? this.type : instance.GetType();
-            if (instanceType.IsAssignableFrom(type) || type.IsAssignableFrom(instanceType)) { // No need to cast if the type is already assignable
+            if (type.IsAssignableFrom(instanceType)) { // No need to cast if the type is already assignable
                 result = instance;
                 return true;
             }
