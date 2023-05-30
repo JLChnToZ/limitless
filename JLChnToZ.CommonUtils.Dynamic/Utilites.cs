@@ -12,10 +12,14 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public static object InternalUnwrap(object obj, Binder binder = null, Type requestedType = null) {
             if (obj == null) return null;
             if (obj is Limitless limitObj) obj = limitObj.target;
-            if (binder != null && requestedType != null)
+            if (requestedType != null) {
                 try {
-                    return binder.ChangeType(obj, requestedType, null);
+                    if (binder != null) return binder.ChangeType(obj, requestedType, null);
                 } catch {}
+                try {
+                    return Convert.ChangeType(obj, requestedType);
+                } catch {}
+            }
             return obj;
         }
 
