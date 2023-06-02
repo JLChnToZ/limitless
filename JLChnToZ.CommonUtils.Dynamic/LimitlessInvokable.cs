@@ -9,12 +9,14 @@ namespace JLChnToZ.CommonUtils.Dynamic {
     /// <summary>Special dynamic object that can be used to invoke methods with same name but different signatures.</summary>
     /// <remarks>This should not be directly used. Use <see cref="Limitless"/> instead.</remarks>
     public class LimitlessInvokable: DynamicObject {
-        readonly MethodInfo[] methodInfos;
-        readonly object target;
+        protected readonly MethodInfo[] methodInfos;
+        protected readonly object target;
+
+        protected virtual MethodInfo[] MethodInfos => methodInfos;
+
+        protected virtual object InvokeTarget => target;
 
         internal LimitlessInvokable(object target, MethodInfo[] methodInfos) {
-            if (methodInfos == null || methodInfos.Length == 0)
-                throw new ArgumentNullException(nameof(methodInfos));
             this.target = target;
             this.methodInfos = methodInfos;
         }
@@ -58,8 +60,8 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         bool TryInvoke(object[] args, out object result) {
             var safeArgs = args;
-            if (TryGetMatchingMethod(methodInfos, ref safeArgs, out var methodInfo)) {
-                result = InternalWrap(methodInfo.Invoke(target, safeArgs));
+            if (TryGetMatchingMethod(MethodInfos, ref safeArgs, out var methodInfo)) {
+                result = InternalWrap(methodInfo.Invoke(InvokeTarget, safeArgs));
                 InternalWrap(safeArgs, args);
                 return true;
             }
@@ -73,28 +75,37 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             throw new InvalidOperationException("No matching method found.");
         }
 
-        public override bool TryConvert(ConvertBinder binder, out object result) =>
-            TryCreateDelegate(binder.Type, out result);
+        public override bool TryConvert(ConvertBinder binder, out object result) {
+            if (TryCreateDelegate(binder.Type, out var resultDelegate)) {
+                result = resultDelegate;
+                return true;
+            }
+            result = null;
+            return false;
+        }
 
         /// <summary>Creates a delegate with the given type.</summary>
-        public dynamic CreateDelegate(Type delegateType) {
+        public Delegate CreateDelegate(Type delegateType) {
             if (TryCreateDelegate(delegateType, out var result)) return result;
             throw new InvalidOperationException("No matching method found.");
         }
 
-        bool TryCreateDelegate(Type delegateType, out object result) {
+        public T CreateDelegate<T>() where T : Delegate => CreateDelegate(typeof(T)) as T;
+
+        internal protected bool TryCreateDelegate(Type delegateType, out Delegate result) {
             if (delegateType.IsSubclassOf(typeof(Delegate))) {
                 var invokeMethod = delegateType.GetMethod("Invoke");
                 if (invokeMethod != null) {
                     var matched = Type.DefaultBinder.SelectMethod(
-                        DEFAULT_FLAGS, methodInfos,
+                        DEFAULT_FLAGS, MethodInfos,
                         Array.ConvertAll(invokeMethod.GetParameters(), GetParameterType), null
                     ) as MethodInfo;
                     if (matched != null && matched.ReturnType == invokeMethod.ReturnType) {
+                        var target = InvokeTarget;
                         result = target == null ?
                             Delegate.CreateDelegate(delegateType, matched, false) :
                             Delegate.CreateDelegate(delegateType, target, matched, false);
-                        return true;
+                        return result != null;
                     }
                 }
             }
@@ -108,7 +119,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         LimitlessInvokable ResolveGenerics(Type[] types) {
             if (types == null) throw new ArgumentNullException(nameof(types));
             var filteredMethods = new List<MethodInfo>();
-            foreach (var methodInfo in methodInfos) {
+            foreach (var methodInfo in MethodInfos) {
                 var genericParams = methodInfo.GetGenericArguments();
                 if (genericParams.Length != types.Length) continue;
                 try {
@@ -117,7 +128,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     throw ex;
                 } // Try next if it fails
             }
-            return new LimitlessInvokable(target, filteredMethods.ToArray());
+            return new LimitlessInvokable(InvokeTarget, filteredMethods.ToArray());
         }
     }
 }

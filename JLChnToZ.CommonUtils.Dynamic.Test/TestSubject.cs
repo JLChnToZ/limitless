@@ -8,6 +8,8 @@
 
         private Dictionary<string, string> undelyDictionary = new Dictionary<string, string>();
 
+        private event Action TestEvent;
+
         private string this[string key] {
             get {
                 lastCalledMethod = "this.get";

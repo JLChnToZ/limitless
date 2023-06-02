@@ -88,6 +88,23 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 default: return ""; // Fail silently
             }
         }
+
+        public static MethodInfo GetUndelyRaiseMethod(this EventInfo eventInfo, out Delegate backingDelegate, object instance = null) {
+            var raiseMethod = eventInfo.GetRaiseMethod(true);
+            backingDelegate = null;
+            if (raiseMethod == null) {
+                var instanceType = instance?.GetType() ?? eventInfo.DeclaringType;
+                var backingField = instanceType.GetField(eventInfo.Name, DEFAULT_FLAGS);
+                if (backingField != null) {
+                    var backingFieldType = backingField.FieldType;
+                    if (backingFieldType.IsSubclassOf(typeof(Delegate))) {
+                        raiseMethod = backingFieldType.GetMethod("Invoke");
+                        backingDelegate = backingField.GetValue(instance) as Delegate;
+                    }
+                }
+            }
+            return raiseMethod;
+        }
     }
 
     internal enum MethodMatchLevel {

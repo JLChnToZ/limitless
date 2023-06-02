@@ -8,12 +8,13 @@ namespace JLChnToZ.CommonUtils.Dynamic {
     /// <summary>Internal struct that holds type members information.</summary>
     public readonly struct TypeInfo {
         static readonly Dictionary<Type, TypeInfo> cache = new Dictionary<Type, TypeInfo>();
-        readonly Type type;
+        internal readonly Type type;
         readonly ConstructorInfo[] constructors;
         readonly PropertyInfo[] indexers;
         readonly Dictionary<string, MethodInfo[]> methods;
         readonly Dictionary<string, PropertyInfo> properties;
         readonly Dictionary<string, FieldInfo> fields;
+        readonly Dictionary<string, EventInfo> events;
         readonly Dictionary<Type, MethodInfo> castInOperators;
         readonly Dictionary<Type, MethodInfo> castOutOperators;
         readonly Dictionary<string, Type> subTypes;
@@ -30,49 +31,77 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             methods = new Dictionary<string, MethodInfo[]>();
             properties = new Dictionary<string, PropertyInfo>();
             fields = new Dictionary<string, FieldInfo>();
+            events = new Dictionary<string, EventInfo>();
             castInOperators = new Dictionary<Type, MethodInfo>();
             castOutOperators = new Dictionary<Type, MethodInfo>();
             subTypes = new Dictionary<string, Type>();
             var tempMethods = new Dictionary<string, List<MethodInfo>>();
-            foreach (var m in type.GetMethods(DEFAULT_FLAGS)) {
-                var methodName = m.Name;
-                if (m.ContainsGenericParameters) {
-                    int methodCountIndex = methodName.LastIndexOf('`');
-                    if (methodCountIndex >= 0) methodName = methodName.Substring(0, methodCountIndex);
-                }
-                if (!tempMethods.TryGetValue(methodName, out var list))
-                    tempMethods[methodName] = list = new List<MethodInfo>();
-                list.Add(m);
-                switch (methodName) {
-                    case "op_Implicit":
-                    case "op_Explicit": {
-                        var parameters = m.GetParameters();
-                        var returnType = m.ReturnType;
-                        if (parameters.Length == 1 && returnType != typeof(void)) {
-                            var inputType = parameters[0].ParameterType;
-                            if (returnType == type)
-                                castInOperators[inputType] = m;
-                            else if (inputType == type)
-                                castOutOperators[returnType] = m;
+            var tempIndexers = new List<PropertyInfo>();
+            var tempConstructors = new List<ConstructorInfo>();
+            foreach (var member in type.GetMembers(DEFAULT_FLAGS))
+                switch (member.MemberType) {
+                    case MemberTypes.Constructor: {
+                        tempConstructors.Add(member as ConstructorInfo);
+                        break;
+                    }
+                    case MemberTypes.Event: {
+                        var eventInfo = member as EventInfo;
+                        events[eventInfo.Name] = eventInfo;
+                        break;
+                    }
+                    case MemberTypes.Field: {
+                        var field = member as FieldInfo;
+                        fields[field.Name] = field;
+                        break;
+                    }
+                    case MemberTypes.Method: {
+                        var method = member as MethodInfo;
+                        var methodName = method.Name;
+                        switch (methodName) {
+                            case "op_Implicit":
+                            case "op_Explicit": {
+                                var parameters = method.GetParameters();
+                                var returnType = method.ReturnType;
+                                if (parameters.Length == 1 && returnType != typeof(void)) {
+                                    var inputType = parameters[0].ParameterType;
+                                    if (returnType == type)
+                                        castInOperators[inputType] = method;
+                                    else if (inputType == type)
+                                        castOutOperators[returnType] = method;
+                                }
+                                break;
+                            }
+                            default: {
+                                if (method.ContainsGenericParameters) {
+                                    int methodCountIndex = methodName.LastIndexOf('`');
+                                    if (methodCountIndex >= 0) methodName = methodName.Substring(0, methodCountIndex);
+                                }
+                                if (!tempMethods.TryGetValue(methodName, out var list))
+                                    tempMethods[methodName] = list = new List<MethodInfo>();
+                                list.Add(method);
+                                break;
+                            }
                         }
                         break;
                     }
+                    case MemberTypes.Property: {
+                        var property = member as PropertyInfo;
+                        if (property.GetIndexParameters().Length > 0) {
+                            tempIndexers.Add(property);
+                            break;
+                        }
+                        properties[property.Name] = property;
+                        break;
+                    }
                 }
-            }
-            foreach (var kv in tempMethods) methods[kv.Key] = kv.Value.ToArray();
-            var tempIndexers = new List<PropertyInfo>();
-            foreach (var p in type.GetProperties(DEFAULT_FLAGS)) {
-                properties[p.Name] = p;
-                if (p.GetIndexParameters().Length > 0) tempIndexers.Add(p);
-            }
+            foreach (var pair in tempMethods) methods[pair.Key] = pair.Value.ToArray();
             indexers = tempIndexers.ToArray();
-            foreach (var f in type.GetFields(DEFAULT_FLAGS)) fields[f.Name] = f;
-            constructors = type.GetConstructors(INSTANCE_FLAGS);
+            constructors = tempConstructors.ToArray();
             foreach (var t in type.GetNestedTypes(DEFAULT_FLAGS)) subTypes[t.Name] = t;
         }
 
         internal bool TryGetValue(object instance, string key, out object value) {
-            if (properties.TryGetValue(key, out var property) && property.CanRead && property.GetIndexParameters().Length == 0) {
+            if (properties.TryGetValue(key, out var property) && property.CanRead) {
                 value = InternalWrap(property.GetValue(instance));
                 return true;
             }
@@ -105,7 +134,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TrySetValue(object instance, string key, object value) {
-            if (properties.TryGetValue(key, out var property) && property.CanWrite && property.GetIndexParameters().Length == 0) {
+            if (properties.TryGetValue(key, out var property) && property.CanWrite) {
                 property.SetValue(InternalUnwrap(instance), value);
                 return true;
             }
@@ -175,5 +204,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TryGetSubType(string name, out Type type) => subTypes.TryGetValue(name, out type);
+
+        internal bool TryGetEvent(string name, out EventInfo evt) => events.TryGetValue(name, out evt);
     }
 }

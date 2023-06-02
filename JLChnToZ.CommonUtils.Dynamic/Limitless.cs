@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Linq.Expressions;
 using System.Dynamic;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
@@ -108,6 +109,10 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 return true;
             if (typeInfo.TryGetMethods(binder.Name, out var methods)) {
                 result = new LimitlessInvokable(target, methods);
+                return true;
+            }
+            if (typeInfo.TryGetEvent(binder.Name, out var evt)) {
+                result = new LimitlessEvent(target, evt);
                 return true;
             }
             if (typeInfo.TryGetSubType(binder.Name, out var subType)) {
@@ -283,5 +288,4 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return true;
         }
     }
-
 }
