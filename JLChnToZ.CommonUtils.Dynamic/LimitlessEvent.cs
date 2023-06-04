@@ -43,8 +43,8 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     targetDelegate = argDelegate;
                 else {
                     // Rewrap delegate to avoid type mismatch
-                    targetDelegate = Delegate.CreateDelegate(eventType, argDelegate, delegateType.GetMethod("Invoke"), false);
-                    if (targetDelegate == null) { // Failed to rewrap, possibly incorrect signature
+                    targetDelegate = argDelegate.ConvertAndFlatten(eventType);
+                    if (targetDelegate == null) {
                         result = null;
                         return false;
                     }

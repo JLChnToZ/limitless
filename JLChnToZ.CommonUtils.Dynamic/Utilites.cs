@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -104,6 +105,40 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 }
             }
             return raiseMethod;
+        }
+
+        public static Delegate ConvertAndFlatten(this Delegate del, Type toType = null) {
+            if (del == null) return null;
+            if (toType == null) toType = del.GetType();
+            var entries = new Stack<Delegate>();
+            entries.Push(del);
+            del = null;
+            while (entries.Count > 0) {
+                var current = entries.Pop();
+                if (current == null) continue;
+                // Check if current delegate multi-cast and if so, flatten it
+                var list = current.GetInvocationList();
+                if (list.Length > 1) {
+                    // We do it in reverse order to preserve the order of the delegates
+                    for (int i = list.Length - 1; i >= 0; i--)
+                        entries.Push(list[i]);
+                    continue;
+                }
+                var target = current.Target;
+                var method = current.Method;
+                // Check if target is a delegate and if so, flatten it
+                if (target is Delegate subDelegate && method.Name == "Invoke") {
+                    list = subDelegate.GetInvocationList();
+                    for (int i = list.Length - 1; i >= 0; i--)
+                        entries.Push(list[i]);
+                    continue;
+                }
+                if (current.GetType() != toType)
+                    current = target == null ? Delegate.CreateDelegate(toType, method, false) :
+                        Delegate.CreateDelegate(toType, target, method, false);
+                del = Delegate.Combine(del, current);
+            }
+            return del;
         }
     }
 
