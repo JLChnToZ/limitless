@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Linq.Expressions;
 using System.Dynamic;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
@@ -167,7 +166,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) =>
-            typeInfo.TryInvoke(target, binder.Name, args, out result) ||
+            TryInvoke(false, binder.Name, out result, args) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryInvokeMember(binder, args, out result));
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
@@ -182,12 +181,15 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return false;
         }
 
+        internal bool TryInvoke(bool isStatic, string name, out object result, params object[] args) =>
+            typeInfo.TryInvoke(isStatic ? null : target, name, args, out result);
+
         public override bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result) =>
-            typeInfo.TryInvoke(null, binder.Operation.ToOperatorMethodName(), new[] { target, arg }, out result) ||
+            TryInvoke(true, binder.Operation.ToOperatorMethodName(), out result, target, arg) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryBinaryOperation(binder, arg, out result));
 
         public override bool TryUnaryOperation(UnaryOperationBinder binder, out object result) =>
-            typeInfo.TryInvoke(null, binder.Operation.ToOperatorMethodName(), new[] { target }, out result) ||
+            TryInvoke(true, binder.Operation.ToOperatorMethodName(), out result, target) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryUnaryOperation(binder, out result));
 
         public override bool TryConvert(ConvertBinder binder, out object result) {
@@ -207,7 +209,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         // Supports await ... syntax
         public virtual LimitlessAwaiter GetAwaiter() =>
-            new LimitlessAwaiter(typeInfo.TryInvoke(target, nameof(GetAwaiter), null, out var awaiter) ? InternalUnwrap(awaiter) : target);
+            new LimitlessAwaiter(TryInvoke(false, nameof(GetAwaiter), out var awaiter, emptyArgs) ? InternalUnwrap(awaiter) : target);
 
         // Supports foreach (... in ...) { ... } syntax
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -224,68 +226,75 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public override int GetHashCode() => target?.GetHashCode() ?? 0;
 
         public override bool Equals(object obj) {
+            if (ReferenceEquals(this, obj)) return true;
             if (obj is Limitless wrapped) obj = wrapped.target;
-            if (ReferenceEquals(target, obj)) return true;
-            if (obj == null) return target == null;
             return target.Equals(obj);
         }
 
         public static bool operator ==(Limitless a, Limitless b) {
-            if (ReferenceEquals(a.target, b.target)) return true;
+            if (ReferenceEquals(a, b)) return true;
             object result;
-            if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result) ||
-                b.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b.target }, out result))
+            if (a.TryInvoke(true, "op_Equality", out result, a.target, b.target) ||
+                b.TryInvoke(true, "op_Equality", out result, a.target, b.target))
                 return (bool)result;
-            return false;
+            return ReferenceEquals(a.target, b.target);
         }
 
         public static bool operator !=(Limitless a, Limitless b) {
-            if (ReferenceEquals(a.target, b.target)) return false;
+            if (ReferenceEquals(a, b)) return false;
             object result;
-            if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result) ||
-                b.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b.target }, out result))
+            if (a.TryInvoke(true, "op_Inequality", out result, a.target, b.target) ||
+                b.TryInvoke(true, "op_Inequality", out result, a.target, b.target))
                 return (bool)result;
-            return true;
+            return !ReferenceEquals(a.target, b.target);
         }
 
         public static bool operator ==(Limitless a, object b) {
-            if (b is Limitless wrapped) b = wrapped.target;
-            if (ReferenceEquals(a.target, b)) return true;
+            if (b is Limitless wrapped) {
+                if (ReferenceEquals(a, wrapped)) return true;
+                b = wrapped.target;
+            }
             object result;
-            if (a.typeInfo.TryInvoke(null, "op_Equality", new[] { a.target, b }, out result)) return (bool)result;
-            if (b == null) return a.target == null;
-            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Equality", new[] { a.target, b }, out result)) return (bool)result;
-            return false;
+            if (a.TryInvoke(true, "op_Equality", out result, a.target, b) ||
+                b.TryInvoke(true, "op_Equality", out result, a.target, b))
+                return (bool)result;
+            return ReferenceEquals(a.target, b);
         }
 
         public static bool operator !=(Limitless a, object b) {
-            if (b is Limitless wrapped) b = wrapped.target;
-            if (ReferenceEquals(a.target, b)) return false;
+            if (b is Limitless wrapped) {
+                if (ReferenceEquals(a, wrapped)) return false;
+                b = wrapped.target;
+            }
             object result;
-            if (a.typeInfo.TryInvoke(null, "op_Inequality", new[] { a.target, b }, out result)) return (bool)result;
-            if (b == null) return a.target != null;
-            if (TypeInfo.Get(b.GetType()).TryInvoke(null, "op_Inequality", new[] { a.target, b }, out result)) return (bool)result;
-            return true;
+            if (a.TryInvoke(true, "op_Inequality", out result, a.target, b) ||
+                b.TryInvoke(true, "op_Inequality", out result, a.target, b))
+                return (bool)result;
+            return !ReferenceEquals(a.target, b);
         }
 
         public static bool operator ==(object a, Limitless b) {
-            if (a is Limitless wrapped) a = wrapped.target;
-            if (ReferenceEquals(a, b.target)) return true;
+            if (a is Limitless wrapped) {
+                if (ReferenceEquals(wrapped, b)) return true;
+                a = wrapped.target;
+            }
             object result;
-            if (b.typeInfo.TryInvoke(null, "op_Equality", new[] { a, b.target }, out result)) return (bool)result;
-            if (a == null) return b.target == null;
-            if (TypeInfo.Get(a.GetType()).TryInvoke(null, "op_Equality", new[] { a, b.target }, out result)) return (bool)result;
-            return false;
+            if (a.TryInvoke(true, "op_Equality", out result, a, b.target) ||
+                b.TryInvoke(true, "op_Equality", out result, a, b.target))
+                return (bool)result;
+            return ReferenceEquals(a, b.target);
         }
 
         public static bool operator !=(object a, Limitless b) {
-            if (a is Limitless wrapped) a = wrapped.target;
-            if (ReferenceEquals(a, b.target)) return false;
+            if (a is Limitless wrapped) {
+                if (ReferenceEquals(wrapped, b)) return false;
+                a = wrapped.target;
+            }
             object result;
-            if (b.typeInfo.TryInvoke(null, "op_Inequality", new[] { a, b.target }, out result)) return (bool)result;
-            if (a == null) return b.target != null;
-            if (TypeInfo.Get(a.GetType()).TryInvoke(null, "op_Inequality", new[] { a, b.target }, out result)) return (bool)result;
-            return true;
+            if (a.TryInvoke(true, "op_Inequality", out result, a, b.target) ||
+                b.TryInvoke(true, "op_Inequality", out result, a, b.target))
+                return (bool)result;
+            return !ReferenceEquals(a, b.target);
         }
     }
 }

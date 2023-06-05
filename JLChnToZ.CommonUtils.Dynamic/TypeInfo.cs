@@ -167,7 +167,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             var safeArgs = args;
             if (methods.TryGetValue(methodName, out var methodArrays) &&
                 TryGetMatchingMethod(methodArrays, ref safeArgs, out var resultMethod)) {
-                result = InternalWrap(resultMethod.Invoke(InternalUnwrap(instance), safeArgs));
+                result = InternalWrap(resultMethod.Invoke(resultMethod.IsStatic ? null : InternalUnwrap(instance), safeArgs));
                 InternalWrap(safeArgs, args);
                 return true;
             }

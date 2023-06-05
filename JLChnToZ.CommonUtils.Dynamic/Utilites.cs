@@ -90,6 +90,16 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             }
         }
 
+        public static bool TryInvoke(this object obj, bool isStatic, string methodName, out object result, params object[] args) {
+            if (obj == null) {
+                result = null;
+                return false;
+            }
+            if (obj is Limitless limitObj)
+                return limitObj.TryInvoke(isStatic, methodName, out result, args);
+            return TypeInfo.Get(obj.GetType()).TryInvoke(isStatic ? null : obj, methodName, args, out result);
+        }
+
         public static MethodInfo GetUndelyRaiseMethod(this EventInfo eventInfo, out Delegate backingDelegate, object instance = null) {
             var raiseMethod = eventInfo.GetRaiseMethod(true);
             backingDelegate = null;
@@ -134,17 +144,11 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     continue;
                 }
                 if (current.GetType() != toType)
-                    current = target == null ? Delegate.CreateDelegate(toType, method, false) :
+                    current = method.IsStatic ? Delegate.CreateDelegate(toType, method, false) :
                         Delegate.CreateDelegate(toType, target, method, false);
                 del = Delegate.Combine(del, current);
             }
             return del;
         }
-    }
-
-    internal enum MethodMatchLevel {
-        NotMatch,
-        Implicit,
-        Exact,
     }
 }

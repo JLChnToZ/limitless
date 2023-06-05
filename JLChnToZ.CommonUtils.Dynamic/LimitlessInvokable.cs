@@ -102,7 +102,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     ) as MethodInfo;
                     if (matched != null && matched.ReturnType == invokeMethod.ReturnType) {
                         var target = InvokeTarget;
-                        result = target == null ?
+                        result = matched.IsStatic ?
                             Delegate.CreateDelegate(delegateType, matched, false) :
                             Delegate.CreateDelegate(delegateType, target, matched, false);
                         return result != null;
