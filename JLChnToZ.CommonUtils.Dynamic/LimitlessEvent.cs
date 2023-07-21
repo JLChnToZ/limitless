@@ -16,7 +16,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
              get {
                 methodInfos[0] = eventInfo.GetUndelyRaiseMethod(out backingDelegate, target);
                 if (methodInfos[0] == null)
-                    throw new InvalidOperationException("Event does not have a raise method.");
+                    throw new InvalidOperationException("Raise method unavailable for this context.");
                 return methodInfos;
              }
         }

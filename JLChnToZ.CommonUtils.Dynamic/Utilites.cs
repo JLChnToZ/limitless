@@ -90,7 +90,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             }
         }
 
-        public static bool TryInvoke(this object obj, bool isStatic, string methodName, out object result, params object[] args) {
+        public static bool TryInvokeSafe(this object obj, bool isStatic, string methodName, out object result, params object[] args) {
             if (obj == null) {
                 result = null;
                 return false;
@@ -109,8 +109,8 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 if (backingField != null) {
                     var backingFieldType = backingField.FieldType;
                     if (backingFieldType.IsSubclassOf(typeof(Delegate))) {
-                        raiseMethod = backingFieldType.GetMethod("Invoke");
                         backingDelegate = backingField.GetValue(instance) as Delegate;
+                        if (backingDelegate != null) raiseMethod = backingFieldType.GetMethod("Invoke");
                     }
                 }
             }

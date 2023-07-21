@@ -76,6 +76,10 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryConvert(ConvertBinder binder, out object result) {
+            if (target != null && binder.Type.IsAssignableFrom(target.GetType())) {
+                result = target;
+                return true;
+            }
             if (TryCreateDelegate(binder.Type, out var resultDelegate)) {
                 result = resultDelegate;
                 return true;
@@ -102,9 +106,16 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                     ) as MethodInfo;
                     if (matched != null && matched.ReturnType == invokeMethod.ReturnType) {
                         var target = InvokeTarget;
-                        result = matched.IsStatic ?
-                            Delegate.CreateDelegate(delegateType, matched, false) :
-                            Delegate.CreateDelegate(delegateType, target, matched, false);
+                        if (matched.IsStatic) {
+                            result = Delegate.CreateDelegate(delegateType, matched, false);
+                            return result != null;
+                        }
+                        var declaringType = matched.DeclaringType;
+                        if (declaringType.IsSubclassOf(typeof(Delegate)) && matched.Name == "Invoke") {
+                            result = (target as Delegate).ConvertAndFlatten(delegateType);
+                            return result != null;
+                        }
+                        result = Delegate.CreateDelegate(delegateType, target, matched, false);
                         return result != null;
                     }
                 }

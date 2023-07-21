@@ -234,67 +234,55 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public static bool operator ==(Limitless a, Limitless b) {
             if (ReferenceEquals(a, b)) return true;
             object result;
-            if (a.TryInvoke(true, "op_Equality", out result, a.target, b.target) ||
-                b.TryInvoke(true, "op_Equality", out result, a.target, b.target))
+            if (a.TryInvokeSafe(true, "op_Equality", out result, a, b) ||
+                b.TryInvokeSafe(true, "op_Equality", out result, a, b))
                 return (bool)result;
-            return ReferenceEquals(a.target, b.target);
+            return ReferenceEquals(a?.target, b?.target);
         }
 
         public static bool operator !=(Limitless a, Limitless b) {
             if (ReferenceEquals(a, b)) return false;
             object result;
-            if (a.TryInvoke(true, "op_Inequality", out result, a.target, b.target) ||
-                b.TryInvoke(true, "op_Inequality", out result, a.target, b.target))
+            if (a.TryInvokeSafe(true, "op_Inequality", out result, a, b) ||
+                b.TryInvokeSafe(true, "op_Inequality", out result, a, b))
                 return (bool)result;
-            return !ReferenceEquals(a.target, b.target);
+            return !ReferenceEquals(a?.target, b?.target);
         }
 
         public static bool operator ==(Limitless a, object b) {
-            if (b is Limitless wrapped) {
-                if (ReferenceEquals(a, wrapped)) return true;
-                b = wrapped.target;
-            }
+            if (ReferenceEquals(a, b)) return true;
             object result;
-            if (a.TryInvoke(true, "op_Equality", out result, a.target, b) ||
-                b.TryInvoke(true, "op_Equality", out result, a.target, b))
+            if (a.TryInvokeSafe(true, "op_Equality", out result, a, b) ||
+                b.TryInvokeSafe(true, "op_Equality", out result, a, b))
                 return (bool)result;
-            return ReferenceEquals(a.target, b);
+            return ReferenceEquals(a?.target, b);
         }
 
         public static bool operator !=(Limitless a, object b) {
-            if (b is Limitless wrapped) {
-                if (ReferenceEquals(a, wrapped)) return false;
-                b = wrapped.target;
-            }
+            if (ReferenceEquals(a, b)) return false;
             object result;
-            if (a.TryInvoke(true, "op_Inequality", out result, a.target, b) ||
-                b.TryInvoke(true, "op_Inequality", out result, a.target, b))
+            if (a.TryInvokeSafe(true, "op_Inequality", out result, a, b) ||
+                b.TryInvokeSafe(true, "op_Inequality", out result, a, b))
                 return (bool)result;
-            return !ReferenceEquals(a.target, b);
+            return !ReferenceEquals(a?.target, b);
         }
 
         public static bool operator ==(object a, Limitless b) {
-            if (a is Limitless wrapped) {
-                if (ReferenceEquals(wrapped, b)) return true;
-                a = wrapped.target;
-            }
+            if (ReferenceEquals(a, b)) return true;
             object result;
-            if (a.TryInvoke(true, "op_Equality", out result, a, b.target) ||
-                b.TryInvoke(true, "op_Equality", out result, a, b.target))
+            if (a.TryInvokeSafe(true, "op_Equality", out result, a, b) ||
+                b.TryInvokeSafe(true, "op_Equality", out result, a, b))
                 return (bool)result;
-            return ReferenceEquals(a, b.target);
+            return ReferenceEquals(a, b?.target);
         }
 
         public static bool operator !=(object a, Limitless b) {
-            if (a is Limitless wrapped) {
-                if (ReferenceEquals(wrapped, b)) return false;
-                a = wrapped.target;
-            }
+            if (ReferenceEquals(a, b)) return false;
             object result;
-            if (a.TryInvoke(true, "op_Inequality", out result, a, b.target) ||
-                b.TryInvoke(true, "op_Inequality", out result, a, b.target))
+            if (a.TryInvokeSafe(true, "op_Inequality", out result, a, b) ||
+                b.TryInvokeSafe(true, "op_Inequality", out result, a, b))
                 return (bool)result;
-            return !ReferenceEquals(a, b.target);
+            return !ReferenceEquals(a, b?.target);
         }
     }
 }
