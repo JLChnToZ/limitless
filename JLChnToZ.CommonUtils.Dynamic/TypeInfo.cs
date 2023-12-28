@@ -10,7 +10,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         static readonly Dictionary<Type, TypeInfo> cache = new Dictionary<Type, TypeInfo>();
         internal readonly Type type;
         readonly ConstructorInfo[] constructors;
-        readonly PropertyInfo[] indexers;
+        internal readonly PropertyInfo[] indexers;
         readonly Dictionary<string, MethodInfo[]> methods;
         readonly Dictionary<string, PropertyInfo> properties;
         readonly Dictionary<string, FieldInfo> fields;
@@ -162,6 +162,13 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TryGetMethods(string methodName, out MethodInfo[] method) => methods.TryGetValue(methodName, out method);
+
+        internal bool TryGetProperties(string propertyName, out PropertyInfo property) => properties.TryGetValue(propertyName, out property);
+
+        internal bool TryGetConverter(Type type, bool isIn, out MethodInfo method) {
+            if (isIn) return castInOperators.TryGetValue(type, out method);
+            return castOutOperators.TryGetValue(type, out method);
+        }
 
         internal bool TryInvoke(object instance, string methodName, object[] args, out object result) {
             var safeArgs = args;

@@ -68,9 +68,12 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 case ExpressionType.LessThan: return "op_LessThan";
                 case ExpressionType.GreaterThanOrEqual: return "op_GreaterThanOrEqual";
                 case ExpressionType.LessThanOrEqual: return "op_LessThanOrEqual";
-                case ExpressionType.Add: case ExpressionType.AddAssign: return "op_Addition";
-                case ExpressionType.Subtract: case ExpressionType.SubtractAssign: return "op_Subtraction";
-                case ExpressionType.Multiply: case ExpressionType.MultiplyAssign: return "op_Multiply";
+                case ExpressionType.Add: case ExpressionType.AddChecked:
+                case ExpressionType.AddAssign: case ExpressionType.AddAssignChecked: return "op_Addition";
+                case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
+                case ExpressionType.SubtractAssign: case ExpressionType.SubtractAssignChecked: return "op_Subtraction";
+                case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
+                case ExpressionType.MultiplyAssign: case ExpressionType.MultiplyAssignChecked: return "op_Multiply";
                 case ExpressionType.Divide: case ExpressionType.DivideAssign: return "op_Division";
                 case ExpressionType.Modulo: case ExpressionType.ModuloAssign: return "op_Modulus";
                 case ExpressionType.And: case ExpressionType.AndAssign: return "op_BitwiseAnd";
@@ -79,14 +82,45 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 case ExpressionType.LeftShift: case ExpressionType.LeftShiftAssign: return "op_LeftShift";
                 case ExpressionType.RightShift: case ExpressionType.RightShiftAssign: return "op_RightShift";
                 case ExpressionType.UnaryPlus: return "op_UnaryPlus";
-                case ExpressionType.Negate: return "op_UnaryNegation";
+                case ExpressionType.Negate: case ExpressionType.NegateChecked: return "op_UnaryNegation";
                 case ExpressionType.Not: return "op_LogicalNot";
                 case ExpressionType.OnesComplement: return "op_OnesComplement";
                 case ExpressionType.Increment: return "op_Increment";
                 case ExpressionType.Decrement: return "op_Decrement";
+                case ExpressionType.Convert: case ExpressionType.ConvertChecked: return "op_Explicit";
                 case ExpressionType.IsTrue: return "op_True";
                 case ExpressionType.IsFalse: return "op_False";
                 default: return ""; // Fail silently
+            }
+        }
+
+        public static int GetOperatorParameterCount(this ExpressionType expressionType) {
+            switch (expressionType) {
+                case ExpressionType.Equal: case ExpressionType.NotEqual:
+                case ExpressionType.GreaterThan: case ExpressionType.LessThan:
+                case ExpressionType.GreaterThanOrEqual: case ExpressionType.LessThanOrEqual:
+                case ExpressionType.Add: case ExpressionType.AddChecked:
+                case ExpressionType.AddAssign: case ExpressionType.AddAssignChecked:
+                case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
+                case ExpressionType.SubtractAssign: case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
+                case ExpressionType.MultiplyAssign: case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.Divide: case ExpressionType.DivideAssign:
+                case ExpressionType.Modulo: case ExpressionType.ModuloAssign:
+                case ExpressionType.And: case ExpressionType.AndAssign:
+                case ExpressionType.Or: case ExpressionType.OrAssign:
+                case ExpressionType.ExclusiveOr: case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShift: case ExpressionType.LeftShiftAssign:
+                case ExpressionType.RightShift: case ExpressionType.RightShiftAssign:
+                case ExpressionType.Power: case ExpressionType.PowerAssign:
+                    return 2;
+                case ExpressionType.UnaryPlus: case ExpressionType.Negate: case ExpressionType.NegateChecked:
+                case ExpressionType.Not: case ExpressionType.OnesComplement:
+                case ExpressionType.Increment: case ExpressionType.Decrement:
+                case ExpressionType.Convert: case ExpressionType.ConvertChecked:
+                case ExpressionType.IsTrue: case ExpressionType.IsFalse:
+                    return 1;
+                default: return 0;
             }
         }
 
