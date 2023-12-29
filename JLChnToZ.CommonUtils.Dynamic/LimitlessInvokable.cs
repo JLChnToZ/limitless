@@ -97,25 +97,22 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public T CreateDelegate<T>() where T : Delegate => CreateDelegate(typeof(T)) as T;
 
         internal protected bool TryCreateDelegate(Type delegateType, out Delegate result) {
-            if (delegateType.IsSubclassOf(typeof(Delegate))) {
-                if (TryGetDelegateSignature(delegateType, out var parameters, out var returnType)) {
-                    var matched = Type.DefaultBinder.SelectMethod(
-                        DEFAULT_FLAGS, MethodInfos, parameters, null
-                    ) as MethodInfo;
-                    if (matched != null && matched.ReturnType == returnType) {
-                        var target = InvokeTarget;
-                        if (matched.IsStatic) {
-                            result = Delegate.CreateDelegate(delegateType, matched, false);
-                            return result != null;
-                        }
-                        var declaringType = matched.DeclaringType;
-                        if (declaringType.IsSubclassOf(typeof(Delegate)) && matched.Name == "Invoke") {
-                            result = (target as Delegate).ConvertAndFlatten(delegateType);
-                            return result != null;
-                        }
-                        result = Delegate.CreateDelegate(delegateType, target, matched, false);
+            if (delegateType.IsSubclassOf(typeof(Delegate)) &&
+                TryGetDelegateSignature(delegateType, out var parameters, out var returnType)) {
+                var matched = SelectMethod(MethodInfos, parameters);
+                if (matched != null && matched.ReturnType == returnType) {
+                    var target = InvokeTarget;
+                    if (matched.IsStatic) {
+                        result = Delegate.CreateDelegate(delegateType, matched, false);
                         return result != null;
                     }
+                    var declaringType = matched.DeclaringType;
+                    if (declaringType.IsSubclassOf(typeof(Delegate)) && matched.Name == "Invoke") {
+                        result = (target as Delegate).ConvertAndFlatten(delegateType);
+                        return result != null;
+                    }
+                    result = Delegate.CreateDelegate(delegateType, target, matched, false);
+                    return result != null;
                 }
             }
             result = null;

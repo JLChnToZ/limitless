@@ -11,12 +11,12 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public const BindingFlags DEFAULT_FLAGS = STATIC_FLAGS | INSTANCE_FLAGS;
         public static readonly object[] emptyArgs = new object[0];
 
-        public static object InternalUnwrap(object obj, Binder binder = null, Type requestedType = null) {
+        public static object InternalUnwrap(object obj, Type requestedType = null) {
             if (obj == null) return null;
             if (obj is Limitless limitObj) obj = limitObj.target;
             if (requestedType != null) {
                 try {
-                    if (binder != null) return binder.ChangeType(obj, requestedType, null);
+                    return Type.DefaultBinder.ChangeType(obj, requestedType, null);
                 } catch {}
                 try {
                     return Convert.ChangeType(obj, requestedType);
@@ -25,9 +25,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return obj;
         }
 
-        public static object[] InternalUnwrap(object[] objs, Binder binder = null, Type[] requestedTypes = null) {
-            for (int i = 0; i < objs.Length; i++) objs[i] = InternalUnwrap(objs[i], binder, requestedTypes != null ? requestedTypes[i] : null);
-            return objs;
+        public static object[] InternalUnwrap(object[] args, ParameterInfo[] parameterInfos = null) {
+            for (int i = 0; i < args.Length; i++) args[i] = InternalUnwrap(args[i], parameterInfos?[i]?.ParameterType);
+            return args;
         }
 
         public static object InternalWrap(object obj, Type type = null) =>
@@ -41,16 +41,19 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         public static bool TryGetMatchingMethod<T>(T[] methodInfos, ref object[] args, out T bestMatches) where T : MethodBase {
             if (args == null) args = emptyArgs;
-            var binder = Type.DefaultBinder;
-            var matched = binder.SelectMethod(DEFAULT_FLAGS, methodInfos, Array.ConvertAll(args, GetUndelyType), null);
-            if (matched != null) {
-                bestMatches = (T)matched;
-                args = InternalUnwrap(args, binder, matched.GetParameters().ToParameterTypes());
+            bestMatches = SelectMethod(methodInfos, Array.ConvertAll(args, GetUndelyType));
+            if (bestMatches != null) {
+                args = InternalUnwrap(args, bestMatches.GetParameters());
                 return true;
             }
-            bestMatches = null;
             return false;
         }
+
+        public static TMethod SelectMethod<TMethod>(TMethod[] methodInfos, Type[] parameters, BindingFlags bindingFlags = DEFAULT_FLAGS) where TMethod : MethodBase =>
+            Type.DefaultBinder.SelectMethod(bindingFlags, methodInfos, parameters, null) as TMethod;
+
+        public static PropertyInfo SelectIndexer(PropertyInfo[] indexers, Type[] parameters, Type returnType = null, BindingFlags bindingFlags = DEFAULT_FLAGS) =>
+            Type.DefaultBinder.SelectProperty(bindingFlags, indexers, returnType, parameters, null);
 
         public static Type GetUndelyType(object obj) {
             if (obj == null) return typeof(object);
@@ -70,12 +73,10 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 returnType = null;
                 return false;
             }
-            parameters = invokeMethod.GetParameters().ToParameterTypes();
+            parameters = Array.ConvertAll(invokeMethod.GetParameters(), GetParameterType);
             returnType = invokeMethod.ReturnType;
             return true;
         }
-
-        public static Type[] ToParameterTypes(this ParameterInfo[] parameterInfos) => Array.ConvertAll(parameterInfos, GetParameterType);
 
         static Type GetParameterType(ParameterInfo parameterInfo) => parameterInfo.ParameterType;
 

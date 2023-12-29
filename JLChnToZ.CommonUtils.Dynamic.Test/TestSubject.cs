@@ -1,4 +1,9 @@
-﻿namespace JLChnToZ.CommonUtils.Dynamic.Test {
+﻿#pragma warning disable CS0067
+#pragma warning disable CS0414
+#pragma warning disable CS0660
+#pragma warning disable CS0661
+
+namespace JLChnToZ.CommonUtils.Dynamic.Test {
     internal class TestSubject: IInterface {
         public static string lastCalledMethod;
 

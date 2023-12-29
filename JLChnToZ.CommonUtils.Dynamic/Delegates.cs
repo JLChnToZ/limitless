@@ -119,7 +119,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             TypeInfo.Get(type).TryGetMethods(methodName, out var methods) &&
             TryGetDelegateSignature(delegateType, out var parameters, out _) ? BindMethod(
                 type, delegateType,
-                Type.DefaultBinder.SelectMethod(bindingFlags, methods, parameters, null) as MethodInfo,
+                SelectMethod(methods, parameters, bindingFlags),
                 target
             ) : null;
 
@@ -134,7 +134,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             var typeInfo = TypeInfo.Get(type);
             PropertyInfo selectedProperty;
             if (parameters.Length > 0) {
-                selectedProperty = Type.DefaultBinder.SelectProperty(bindingFlags, typeInfo.indexers, returnType, parameters, null);
+                selectedProperty = SelectIndexer(typeInfo.indexers, parameters, returnType, bindingFlags);
                 if (selectedProperty == null) return null;
             } else if (!typeInfo.TryGetProperties(propertyName, out selectedProperty))
                 return null;

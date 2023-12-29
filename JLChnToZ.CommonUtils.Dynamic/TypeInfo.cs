@@ -121,15 +121,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 value = null;
                 return false;
             }
-            var binder = Type.DefaultBinder;
-            var matched = binder.SelectProperty(
-                DEFAULT_FLAGS | BindingFlags.GetProperty, indexers, null, Array.ConvertAll(indexes, GetUndelyType), null
-            );
+            var matched = SelectIndexer(indexers, Array.ConvertAll(indexes, GetUndelyType), null, DEFAULT_FLAGS | BindingFlags.GetProperty);
             if (matched != null) {
-                value = InternalWrap(matched.GetValue(instance, InternalUnwrap(
-                    indexes, binder,
-                    matched.GetIndexParameters().ToParameterTypes()
-                )));
+                value = InternalWrap(matched.GetValue(instance, InternalUnwrap(indexes, matched.GetIndexParameters())));
                 return true;
             }
             value = null;
@@ -150,15 +144,9 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         internal bool TrySetValue(object instance, object[] indexes, object value) {
             if (indexes == null || indexers.Length == 0) return false;
-            var binder = Type.DefaultBinder;
-            var matched = binder.SelectProperty(
-                DEFAULT_FLAGS | BindingFlags.SetProperty, indexers, null, Array.ConvertAll(indexes, GetUndelyType), null
-            );
+            var matched = SelectIndexer(indexers, Array.ConvertAll(indexes, GetUndelyType), null, DEFAULT_FLAGS | BindingFlags.SetProperty);
             if (matched != null) {
-                matched.SetValue(InternalUnwrap(instance), value, InternalUnwrap(
-                    indexes, binder,
-                    matched.GetIndexParameters().ToParameterTypes()
-                ));
+                matched.SetValue(InternalUnwrap(instance), value, InternalUnwrap(indexes, matched.GetIndexParameters()));
                 return true;
             }
             return false;
