@@ -9,6 +9,10 @@ namespace JLChnToZ.CommonUtils.Dynamic {
     /// <summary>
     /// Provides methods to bind methods, properties, converters and operators to delegates, regardness of its visibility.
     /// </summary>
+    /// <remarks>
+    /// Using delegates are more efficient than using reflection and dynamic objects.
+    /// Recommend stick to delegates unless your usage is too complex to be handled by delegates such as working on temporary instances.
+    /// </remarks>
     public static class Delegates {
         static readonly Dictionary<(Type srcType, Type destType, Type delegateType), Delegate> converterCache =
             new Dictionary<(Type, Type, Type), Delegate>();
@@ -112,23 +116,15 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             BindProperty(typeof(T), DEFAULT_FLAGS, propertyName, typeof(TDelegate), target) as TDelegate;
 
         static Delegate BindMethod(Type type, string methodName, BindingFlags bindingFlags, Type delegateType, object target = null) =>
-            TypeInfo.Get(type).TryGetMethods(methodName, out var methods) ? BindMethod(
+            TypeInfo.Get(type).TryGetMethods(methodName, out var methods) &&
+            TryGetDelegateSignature(delegateType, out var parameters, out _) ? BindMethod(
                 type, delegateType,
-                Type.DefaultBinder.SelectMethod(
-                    bindingFlags, methods,
-                    Array.ConvertAll(
-                        delegateType.GetMethod("Invoke").GetParameters(),
-                        GetParameterType
-                    ),
-                    null
-                ) as MethodInfo,
+                Type.DefaultBinder.SelectMethod(bindingFlags, methods, parameters, null) as MethodInfo,
                 target
             ) : null;
 
         static Delegate BindProperty(Type type, BindingFlags bindingFlags, string propertyName, Type delegateType, object target = null) {
-            var invokeMethod = delegateType.GetMethod("Invoke");
-            var returnType = invokeMethod.ReturnType;
-            var parameters = Array.ConvertAll(invokeMethod.GetParameters(), GetParameterType);
+            if (!TryGetDelegateSignature(delegateType, out var parameters, out var returnType)) return null;
             bool isSetterRequested = returnType == typeof(void);
             if (isSetterRequested) {
                 if (parameters.Length == 0) return null;
@@ -160,8 +156,6 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             }
             return Delegate.CreateDelegate(delegateType, target, method, false);
         }
-
-        static Type GetParameterType(ParameterInfo parameter) => parameter.ParameterType;
         #endregion
 
         #region Bind Converters
@@ -197,9 +191,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             if (destType == null) throw new ArgumentNullException(nameof(destType));
             if (delegateType != null) {
                 if (!delegateType.IsSubclassOf(typeof(Delegate))) throw new ArgumentException($"Type {delegateType} is not a delegate type");
-                var invokeMethod = delegateType.GetMethod("Invoke");
-                var parameters = invokeMethod.GetParameters();
-                if (parameters.Length != 1 || parameters[0].ParameterType != srcType || invokeMethod.ReturnType != destType)
+                if (!TryGetDelegateSignature(delegateType, out var parameters, out var returnType) || parameters.Length != 1 || returnType != destType)
                     throw new ArgumentException($"Delegate type {delegateType} is not compatible with converter from {srcType} to {destType}");
             }
             return BindConverterUnchecked(srcType, destType, delegateType);

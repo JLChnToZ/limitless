@@ -5,6 +5,7 @@ using System.Reflection;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
     using static Utilites;
+
     /// <summary>Special dynamic object that can be used to access events.</summary>
     /// <remarks>This should not be directly used. Use <see cref="Limitless"/> instead.</remarks>
     public class LimitlessEvent: LimitlessInvokable {

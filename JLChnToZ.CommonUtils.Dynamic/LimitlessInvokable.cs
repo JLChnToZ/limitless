@@ -98,13 +98,11 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         internal protected bool TryCreateDelegate(Type delegateType, out Delegate result) {
             if (delegateType.IsSubclassOf(typeof(Delegate))) {
-                var invokeMethod = delegateType.GetMethod("Invoke");
-                if (invokeMethod != null) {
+                if (TryGetDelegateSignature(delegateType, out var parameters, out var returnType)) {
                     var matched = Type.DefaultBinder.SelectMethod(
-                        DEFAULT_FLAGS, MethodInfos,
-                        Array.ConvertAll(invokeMethod.GetParameters(), GetParameterType), null
+                        DEFAULT_FLAGS, MethodInfos, parameters, null
                     ) as MethodInfo;
-                    if (matched != null && matched.ReturnType == invokeMethod.ReturnType) {
+                    if (matched != null && matched.ReturnType == returnType) {
                         var target = InvokeTarget;
                         if (matched.IsStatic) {
                             result = Delegate.CreateDelegate(delegateType, matched, false);

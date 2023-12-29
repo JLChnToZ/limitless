@@ -45,7 +45,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             var matched = binder.SelectMethod(DEFAULT_FLAGS, methodInfos, Array.ConvertAll(args, GetUndelyType), null);
             if (matched != null) {
                 bestMatches = (T)matched;
-                args = InternalUnwrap(args, binder, Array.ConvertAll(matched.GetParameters(), GetParameterType));
+                args = InternalUnwrap(args, binder, matched.GetParameters().ToParameterTypes());
                 return true;
             }
             bestMatches = null;
@@ -58,7 +58,26 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return obj.GetType();
         }
 
-        public static Type GetParameterType(ParameterInfo parameterInfo) => parameterInfo.ParameterType;
+        public static bool TryGetDelegateSignature(Type delegateType, out Type[] parameters, out Type returnType) {
+            if (delegateType == null) {
+                parameters = null;
+                returnType = null;
+                return false;
+            }
+            var invokeMethod = delegateType.GetMethod("Invoke");
+            if (invokeMethod == null) {
+                parameters = null;
+                returnType = null;
+                return false;
+            }
+            parameters = invokeMethod.GetParameters().ToParameterTypes();
+            returnType = invokeMethod.ReturnType;
+            return true;
+        }
+
+        public static Type[] ToParameterTypes(this ParameterInfo[] parameterInfos) => Array.ConvertAll(parameterInfos, GetParameterType);
+
+        static Type GetParameterType(ParameterInfo parameterInfo) => parameterInfo.ParameterType;
 
         public static string ToOperatorMethodName(this ExpressionType expressionType) {
             switch (expressionType) {

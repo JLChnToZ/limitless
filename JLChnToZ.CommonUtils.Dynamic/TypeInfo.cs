@@ -93,11 +93,14 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                         properties[property.Name] = property;
                         break;
                     }
+                    case MemberTypes.NestedType: {
+                        subTypes[member.Name] = member as Type;
+                        break;
+                    }
                 }
             foreach (var pair in tempMethods) methods[pair.Key] = pair.Value.ToArray();
             indexers = tempIndexers.ToArray();
             constructors = tempConstructors.ToArray();
-            foreach (var t in type.GetNestedTypes(DEFAULT_FLAGS)) subTypes[t.Name] = t;
         }
 
         internal bool TryGetValue(object instance, string key, out object value) {
@@ -125,7 +128,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             if (matched != null) {
                 value = InternalWrap(matched.GetValue(instance, InternalUnwrap(
                     indexes, binder,
-                    Array.ConvertAll(matched.GetIndexParameters(), GetParameterType)
+                    matched.GetIndexParameters().ToParameterTypes()
                 )));
                 return true;
             }
@@ -154,7 +157,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             if (matched != null) {
                 matched.SetValue(InternalUnwrap(instance), value, InternalUnwrap(
                     indexes, binder,
-                    Array.ConvertAll(matched.GetIndexParameters(), GetParameterType)
+                    matched.GetIndexParameters().ToParameterTypes()
                 ));
                 return true;
             }
@@ -165,10 +168,8 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         internal bool TryGetProperties(string propertyName, out PropertyInfo property) => properties.TryGetValue(propertyName, out property);
 
-        internal bool TryGetConverter(Type type, bool isIn, out MethodInfo method) {
-            if (isIn) return castInOperators.TryGetValue(type, out method);
-            return castOutOperators.TryGetValue(type, out method);
-        }
+        internal bool TryGetConverter(Type type, bool isIn, out MethodInfo method) =>
+            (isIn ? castInOperators : castOutOperators).TryGetValue(type, out method);
 
         internal bool TryInvoke(object instance, string methodName, object[] args, out object result) {
             var safeArgs = args;
@@ -193,7 +194,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 result = instance;
                 return true;
             }
-            if ((isIn ? castInOperators : castOutOperators).TryGetValue(type, out var method)) {
+            if (TryGetConverter(type, isIn, out var method)) {
                 result = method.Invoke(null, new[] { instance });
                 return true;
             }
