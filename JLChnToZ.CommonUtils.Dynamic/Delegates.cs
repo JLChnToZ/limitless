@@ -20,6 +20,30 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             new Dictionary<(Type, Type, Type, ExpressionType, Type), Delegate>();
 
         #region Bind Method & Property
+        /// <summary>Bind a method or property to a delegate.</summary>
+        /// <typeparam name="TDelegate">The type of the delegate.</typeparam>
+        /// <param name="member">The method or property info.</param>
+        /// <param name="target">The object that contains the method or property. Null if it is a static method or property.</param>
+        /// <returns>The delegate that bound to the method or property.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="member"/> is null.</exception>
+        public static TDelegate Bind<TDelegate>(this MemberInfo member, object target = null) where TDelegate : Delegate {
+            if (member == null) throw new ArgumentNullException(nameof(member));
+            if (member is MethodInfo method)
+                return BindMethod(method.DeclaringType, typeof(TDelegate), method, target) as TDelegate;
+            if (member is PropertyInfo property) {
+                var delegateType = typeof(TDelegate);
+                if (!TryGetDelegateSignature(delegateType, out _, out var returnType)) return null;
+                return BindMethod(
+                    property.DeclaringType, delegateType,
+                    returnType == typeof(void) ?
+                        property.GetSetMethod(true) :
+                        property.GetGetMethod(true),
+                    target
+                ) as TDelegate;
+            }
+            return null;
+        }
+
         /// <summary>Bind a method to a delegate.</summary>
         /// <typeparam name="TDelegate">The type of the delegate.</typeparam>
         /// <param name="typeName">The type name of the type that contains the method.</param>
@@ -153,7 +177,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             if (target == null) {
                 if (!targetType.IsValueType) return null;
                 target = Activator.CreateInstance(targetType);
-            }
+            } else if (!targetType.IsInstanceOfType(target)) return null;
             return Delegate.CreateDelegate(delegateType, target, method, false);
         }
         #endregion

@@ -6,3 +6,4 @@ using System.Reflection;
 [assembly: AssemblyCompany("Explosive Theorem Lab")]
 [assembly: AssemblyFileVersion("1.0.0.0")]
 [assembly: AssemblyInformationalVersion("1.0.0")]
+[assembly: AssemblyCopyright("Copyright (c) 2023 Jeremy Lam (JLChnToZ). Licensed under MIT.")]
