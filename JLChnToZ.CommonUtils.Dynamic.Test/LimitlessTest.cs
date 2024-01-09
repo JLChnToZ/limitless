@@ -138,6 +138,11 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
             if (isStatic) return;
             Assert.IsTrue(limitless.PrivateMethod(true), "Access private method");
             Assert.IsNull(limitless.PrivateMethod(null), "Access private method with null");
+            limitless.PrivateMethodMultiArgs(1, qux: 2);
+            Assert.IsTrue(
+                "PrivateMethodMultiArgs1,0,0,2" == TestSubject.lastCalledMethod,
+                "Access private method with multiple arguments. Get " + TestSubject.lastCalledMethod
+            );
         }
 
         void TestGenericMethodAccess(dynamic limitless, bool isStatic) {

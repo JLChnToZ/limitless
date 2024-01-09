@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Reflection;
 
 namespace JLChnToZ.CommonUtils.Dynamic {
@@ -159,12 +160,12 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         internal bool TryGetConverter(Type type, bool isIn, out MethodInfo method) =>
             (isIn ? castInOperators : castOutOperators).TryGetValue(type, out method);
 
-        internal bool TryInvoke(object instance, string methodName, object[] args, out object result) {
-            var safeArgs = args;
+        internal bool TryInvoke(object instance, string methodName, object[] args, out object result, CallInfo callInfo = null) {
+            var safeArgs = args ?? Array.Empty<object>();
             if (methods.TryGetValue(methodName, out var methodArrays) &&
-                TryGetMatchingMethod(methodArrays, ref safeArgs, out var resultMethod)) {
+                TryGetMatchingMethod(methodArrays, ref safeArgs, out var resultMethod, callInfo, out var bindState)) {
                 result = InternalWrap(resultMethod.Invoke(resultMethod.IsStatic ? null : InternalUnwrap(instance), safeArgs));
-                InternalWrap(safeArgs, args);
+                InternalWrap(safeArgs, args, bindState, callInfo?.ArgumentNames.Count ?? 0);
                 return true;
             }
             result = null;
@@ -191,7 +192,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         internal bool TryConstruct(object[] args, out object result) {
-            if (TryGetMatchingMethod(constructors, ref args, out var resultConstructor)) {
+            if (TryGetMatchingMethod(constructors, ref args, out var resultConstructor, null, out _)) {
                 result = InternalWrap(resultConstructor.Invoke(args));
                 return true;
             }

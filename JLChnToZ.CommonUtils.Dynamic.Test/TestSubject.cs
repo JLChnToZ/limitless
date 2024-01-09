@@ -88,7 +88,7 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
         }
 
         private bool PrivateMethod(bool par) {
-            lastCalledMethod = "PrivateMethodBool";
+            lastCalledMethod = "PrivateMethodBool"; 
             return par;
         }
 
@@ -105,6 +105,10 @@ namespace JLChnToZ.CommonUtils.Dynamic.Test {
         bool IInterface.HiddenInterfaceMethod(bool par) {
             lastCalledMethod = "HiddenInterfaceMethodBool";
             return par;
+        }
+        
+        void PrivateMethodMultiArgs(int foo = 0, int bar = 0, int baz = 0, int qux = 0) {
+            lastCalledMethod = "PrivateMethodMultiArgs" + string.Join(',', foo, bar, baz, qux);
         }
 
         public static IEnumerable<object> EnumerableMethod() {

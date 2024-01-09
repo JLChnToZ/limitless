@@ -56,13 +56,13 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) =>
-            TryInvoke(args, out result);
+            TryInvoke(args, out result, binder.CallInfo);
 
-        bool TryInvoke(object[] args, out object result) {
+        bool TryInvoke(object[] args, out object result, CallInfo callInfo = null) {
             var safeArgs = args;
-            if (TryGetMatchingMethod(MethodInfos, ref safeArgs, out var methodInfo)) {
+            if (TryGetMatchingMethod(MethodInfos, ref safeArgs, out var methodInfo, callInfo, out var bindState)) {
                 result = InternalWrap(methodInfo.Invoke(InvokeTarget, safeArgs));
-                InternalWrap(safeArgs, args);
+                InternalWrap(safeArgs, args, bindState, callInfo?.ArgumentNames.Count ?? 0);
                 return true;
             }
             result = null;

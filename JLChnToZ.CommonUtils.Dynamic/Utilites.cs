@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -9,7 +10,6 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public const BindingFlags STATIC_FLAGS = BASE_FLAGS | BindingFlags.Static;
         public const BindingFlags INSTANCE_FLAGS = BASE_FLAGS | BindingFlags.Instance;
         public const BindingFlags DEFAULT_FLAGS = STATIC_FLAGS | INSTANCE_FLAGS;
-        public static readonly object[] emptyArgs = new object[0];
 
         public static object InternalUnwrap(object obj, Type requestedType = null) {
             if (obj == null) return null;
@@ -33,18 +33,72 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         public static object InternalWrap(object obj, Type type = null) =>
             obj == null || obj is Limitless || obj is LimitlessInvokable || Type.GetTypeCode(obj.GetType()) != TypeCode.Object ? obj : new Limitless(obj, type);
 
-        public static void InternalWrap(object[] sourceObj, object[] destObj) {
+        public static void InternalWrap(object[] sourceObj, object[] destObj, object bindState = null, int namedCount = 0) {
             if (sourceObj == null || destObj == null) return;
+            // If namedCount is not zero and smaller than the length of the array,
+            // which means the arguments array has been adjusted to fit BindToMethod,
+            // we need to swap the arguments back.
+            if (namedCount > 0 && namedCount < sourceObj.Length) {
+                var temp = new object[namedCount];
+                int orderedCount = sourceObj.Length - namedCount;
+                Array.Copy(sourceObj, 0, temp, 0, namedCount);
+                Array.Copy(sourceObj, namedCount, sourceObj, 0, orderedCount);
+                Array.Copy(temp, 0, sourceObj, orderedCount, namedCount);
+            }
+            if (bindState != null) Type.DefaultBinder.ReorderArgumentArray(ref sourceObj, bindState);
             if (sourceObj != destObj) Array.Copy(sourceObj, 0, destObj, 0, Math.Min(sourceObj.Length, destObj.Length));
             for (int i = 0; i < destObj.Length; i++) destObj[i] = InternalWrap(destObj[i]);
         }
 
-        public static bool TryGetMatchingMethod<T>(T[] methodInfos, ref object[] args, out T bestMatches) where T : MethodBase {
-            if (args == null) args = emptyArgs;
-            bestMatches = SelectMethod(methodInfos, Array.ConvertAll(args, GetUndelyType));
-            if (bestMatches != null) {
-                args = InternalUnwrap(args, bestMatches.GetParameters());
-                return true;
+        public static bool TryGetMatchingMethod<T>(T[] methodInfos, ref object[] args, out T bestMatches, CallInfo callInfo, out object bindState) where T : MethodBase {
+            if (args == null) args = Array.Empty<object>();
+            string[] names = null;
+            if (callInfo != null) {
+                var inputNames = callInfo.ArgumentNames;
+                int namedCount = inputNames.Count;
+                // Named input args detected.
+                if (namedCount > 0) {
+                    names = new string[namedCount];
+                    inputNames.CopyTo(names, 0);
+                    // Named arguments are queued to the end of the array but BindToMethod requires them to be at the beginning,
+                    // therefore we need to swap here.
+                    if (args.Length > namedCount) {
+                        var temp = new object[namedCount];
+                        int orderedCount = args.Length - namedCount;
+                        Array.Copy(args, orderedCount, temp, 0, namedCount);
+                        Array.Copy(args, 0, args, namedCount, orderedCount);
+                        Array.Copy(temp, 0, args, 0, namedCount);
+                    }
+                }
+            }
+            try {
+                var unwrappedArgs = InternalUnwrap(args);
+                bestMatches = Type.DefaultBinder.BindToMethod(DEFAULT_FLAGS, methodInfos, ref unwrappedArgs, null, null, names, out bindState) as T;
+                if (bestMatches != null) {
+                    args = unwrappedArgs;
+                    return true;
+                }
+            } catch (MissingMethodException) {
+                // No matching method found.
+                bestMatches = null;
+                bindState = null;
+            } catch (AmbiguousMatchException) {
+                // BindToMethod is too stict sometimes, so in case of failing (and named arguments not used),
+                // we can give a second try: use SelectMethod as a fallback.
+                bindState = null;
+                if (names == null) {
+                    bestMatches = SelectMethod(methodInfos, Array.ConvertAll(args, GetUndelyType));
+                    if (bestMatches != null) {
+                        args = InternalUnwrap(args, bestMatches.GetParameters());
+                        return true;
+                    }
+                } else
+                    bestMatches = null;
+            } catch (IndexOutOfRangeException) {
+                // Should not get here, but theres a bug in .NET Core 6 or earlier may.
+                // (https://github.com/dotnet/runtime/issues/66237)
+                bestMatches = null;
+                bindState = null;
             }
             return false;
         }

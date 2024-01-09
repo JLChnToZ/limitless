@@ -166,7 +166,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result) =>
-            TryInvoke(false, binder.Name, out result, args) ||
+            TryInvoke(false, binder.Name, out result, args, binder.CallInfo) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryInvokeMember(binder, args, out result));
 
         public override bool TryInvoke(InvokeBinder binder, object[] args, out object result) {
@@ -181,15 +181,15 @@ namespace JLChnToZ.CommonUtils.Dynamic {
             return false;
         }
 
-        internal bool TryInvoke(bool isStatic, string name, out object result, params object[] args) =>
-            typeInfo.TryInvoke(isStatic ? null : target, name, args, out result);
+        internal bool TryInvoke(bool isStatic, string name, out object result, object[] args = null, CallInfo callInfo = null) =>
+            typeInfo.TryInvoke(isStatic ? null : target, name, args, out result, callInfo);
 
         public override bool TryBinaryOperation(BinaryOperationBinder binder, object arg, out object result) =>
-            TryInvoke(true, binder.Operation.ToOperatorMethodName(), out result, target, arg) ||
+            TryInvoke(true, binder.Operation.ToOperatorMethodName(), out result, new [] { target, arg }) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryBinaryOperation(binder, arg, out result));
 
         public override bool TryUnaryOperation(UnaryOperationBinder binder, out object result) =>
-            TryInvoke(true, binder.Operation.ToOperatorMethodName(), out result, target) ||
+            TryInvoke(true, binder.Operation.ToOperatorMethodName(), out result, new [] { target }) ||
             (target is DynamicObject dynamicObject && dynamicObject.TryUnaryOperation(binder, out result));
 
         public override bool TryConvert(ConvertBinder binder, out object result) {
@@ -209,7 +209,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
 
         // Supports await ... syntax
         public virtual LimitlessAwaiter GetAwaiter() =>
-            new LimitlessAwaiter(TryInvoke(false, nameof(GetAwaiter), out var awaiter, emptyArgs) ? InternalUnwrap(awaiter) : target);
+            new LimitlessAwaiter(TryInvoke(false, nameof(GetAwaiter), out var awaiter) ? InternalUnwrap(awaiter) : target);
 
         // Supports foreach (... in ...) { ... } syntax
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

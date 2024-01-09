@@ -17,7 +17,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         }
 
         public dynamic GetResult() {
-            if (target is INotifyCompletion && typeInfo.TryInvoke(target, nameof(GetResult), emptyArgs, out var result))
+            if (target is INotifyCompletion && typeInfo.TryInvoke(target, nameof(GetResult), null, out var result))
                 return result;
             return InternalWrap(target);
         }

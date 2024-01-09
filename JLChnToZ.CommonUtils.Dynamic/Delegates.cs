@@ -224,17 +224,7 @@ namespace JLChnToZ.CommonUtils.Dynamic {
         static Delegate BindConverterUnchecked(Type srcType, Type destType, Type delegateType) {
             lock (converterCache) {
                 if (!converterCache.TryGetValue((srcType, destType, delegateType), out var converterFunc)) {
-                    var method =
-                        destType.IsAssignableFrom(srcType) ?
-                            typeof(Delegates).GetMethod(nameof(ToBaseType), STATIC_FLAGS).MakeGenericMethod(srcType, destType) :
-                        srcType.IsAssignableFrom(destType) ?
-                            typeof(Delegates).GetMethod(nameof(ToInheritedType), STATIC_FLAGS).MakeGenericMethod(srcType, destType) :
-                        TypeInfo.Get(destType).TryGetConverter(srcType, true, out var m) ? m :
-                        TypeInfo.Get(srcType).TryGetConverter(destType, false, out m) ? m :
-                        srcType.IsPrimitive && destType.IsPrimitive ?
-                            typeof(Convert).GetMethod($"To{Type.GetTypeCode(destType)}", STATIC_FLAGS, null, new[] { srcType }, null) :
-                        typeof(Delegates).GetMethod(nameof(ToType), STATIC_FLAGS).MakeGenericMethod(srcType, destType);
-                    if (method != null)
+                    if (TryGetConverterMethod(srcType, destType, out var method))
                         converterFunc = Delegate.CreateDelegate(
                             delegateType ?? typeof(Func<,>).MakeGenericType(srcType, destType),
                             method, false
@@ -244,6 +234,34 @@ namespace JLChnToZ.CommonUtils.Dynamic {
                 return converterFunc;
             }
         }
+
+        static bool TryGetConverterMethod(Type srcType, Type destType, out MethodInfo result) {
+            if (srcType == null) throw new ArgumentNullException(nameof(srcType));
+            if (destType == null) throw new ArgumentNullException(nameof(destType));
+            if (srcType == destType) {
+                result = typeof(Delegates).GetMethod(nameof(ToSameType), STATIC_FLAGS).MakeGenericMethod(srcType);
+                return true;
+            }
+            if (destType.IsAssignableFrom(srcType)) {
+                result = typeof(Delegates).GetMethod(nameof(ToBaseType), STATIC_FLAGS).MakeGenericMethod(srcType, destType);
+                return true;
+            }
+            if (srcType.IsAssignableFrom(destType)) {
+                result = typeof(Delegates).GetMethod(nameof(ToInheritedType), STATIC_FLAGS).MakeGenericMethod(srcType, destType);
+                return true;
+            }
+            if (TypeInfo.Get(destType).TryGetConverter(srcType, true, out result) ||
+                TypeInfo.Get(srcType).TryGetConverter(destType, false, out result))
+                return true;
+            if (srcType.IsPrimitive && destType.IsPrimitive) {
+                result = typeof(Convert).GetMethod($"To{Type.GetTypeCode(destType)}", STATIC_FLAGS, null, new[] { srcType }, null);
+                return result != null;
+            }
+            result = null;
+            return false;
+        }
+
+        static T ToSameType<T>(T value) => value;
 
         static TDest ToBaseType<TSource, TDest>(TSource value) where TSource : TDest => value;
 
